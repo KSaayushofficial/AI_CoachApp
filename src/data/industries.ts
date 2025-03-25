@@ -1,0 +1,98 @@
+export const industries = [
+  {
+    id: 1,
+    name: "Technology",
+    subIndustries: [
+      "softwareDevelopment",
+      "hardwareEngineering",
+      "aiAndMachineLearning",
+      "cloudComputing",
+      "cyberSecurity",
+      "dataScience",
+    ],
+  },
+  {
+    id: 2,
+    name: "Healthcare",
+    subIndustries: [
+      "pharmaceuticals",
+      "medicalDevices",
+      "healthTech",
+      "biotechnology",
+      "telemedicine",
+      "clinicalResearch",
+    ],
+  },
+  {
+    id: 3,
+    name: "Finance",
+    subIndustries: [
+      "banking",
+      "insurance",
+      "investmentManagement",
+      "finTech",
+      "accounting",
+      "wealthManagement",
+    ],
+  },
+  {
+    id: 4,
+    name: "Education",
+    subIndustries: [
+      "k12Education",
+      "higherEducation",
+      "edTech",
+      "vocationalTraining",
+      "onlineLearning",
+      "specialEducation",
+    ],
+  },
+  {
+    id: 5,
+    name: "Retail",
+    subIndustries: [
+      "eCommerce",
+      "brickAndMortar",
+      "supplyChainManagement",
+      "retailTech",
+      "wholesale",
+      "inventoryManagement",
+    ],
+  },
+  {
+    id: 6,
+    name: "Energy",
+    subIndustries: [
+      "renewableEnergy",
+      "oilAndGas",
+      "utilities",
+      "nuclearEnergy",
+      "energyStorage",
+      "energyConsulting",
+    ],
+  },
+  {
+    id: 7,
+    name: "Manufacturing",
+    subIndustries: [
+      "automotiveManufacturing",
+      "electronicsManufacturing",
+      "textileManufacturing",
+      "industrialMachinery",
+      "foodProcessing",
+      "chemicalManufacturing",
+    ],
+  },
+  {
+    id: 8,
+    name: "Entertainment",
+    subIndustries: [
+      "filmProduction",
+      "musicIndustry",
+      "gaming",
+      "liveEvents",
+      "streamingServices",
+      "animation",
+    ],
+  },
+];

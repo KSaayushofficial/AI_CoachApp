@@ -5,7 +5,7 @@ import { Inter } from "next/font/google";
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { SiteHeader } from "@/components/shared/site-header";
+import SiteHeader from "@/components/shared/site-header";
 import { SiteFooter } from "@/components/shared/site-footer";
 import "./globals.css";
 
@@ -27,16 +27,14 @@ export default function RootLayout({
       <ClerkProvider
         appearance={{
           variables: {
-            colorPrimary: "#454545", // Example customization
-            colorBackground: "#000000", // Set background to black
-            colorText: "#FFFFFF", // Set text to white
+            colorPrimary: "#454545",
           },
           elements: {
-            rootBox: "bg-black text-white", // Apply Tailwind-like classes for additional customization
+            rootBox: " text-white",
             inputField:
-              "border border-gray-500 hover:border-white focus:border-white !important", // Input field hover and focus styles
-            button: "hover:border-white !important", // Button hover border
-            iconButton: "hover:border-white !important", // Icon button hover border
+              "border border-gray-500 hover:border-white focus:border-white !important",
+            button: "hover:border-white !important",
+            iconButton: "hover:border-white !important",
           },
         }}
       >

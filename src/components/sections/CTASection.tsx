@@ -33,7 +33,7 @@ export const CTASection = () => {
               <Button
                 size="lg"
                 variant="secondary"
-                className="rounded-full h-12 px-8 text-gray-900/50 bg-transparent  hover:bg-gray-900 hover:text-primary-foreground shadow-md hover:shadow-lg animate-bounce dark:border-gray-500 dark:hover:bg-gray-700 dark:hover:text-white"
+                className="rounded-full h-12 px-8 text-gray-900 bg-transparent  hover:bg-white/20 hover:text-primary-foreground shadow-md hover:shadow-lg animate-bounce dark:border-gray-500 dark:hover:bg-gray-700 dark:hover:text-white"
               >
                 Start Your Journey
                 <ArrowRight className="ml-2 size-4" />

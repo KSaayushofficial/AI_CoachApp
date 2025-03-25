@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -8,14 +7,23 @@ import { ChevronRight, Menu, X, Moon, Sun, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
+import { checkUser } from "@/lib/checkUser";
+import { User } from "@prisma/client";
 
-export function SiteHeader() {
+const SiteHeader = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotification, setShowNotification] = useState(true);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -32,11 +40,17 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    async function fetchUser() {
+      const user: User | null = await checkUser();
+      setUser(user);
+    }
+    fetchUser();
+  }, []);
+
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
-
-
 
   return (
     <header
@@ -101,19 +115,21 @@ export function SiteHeader() {
             <span className="sr-only">Toggle theme</span>
           </Button>
           <SignedOut>
-            <SignInButton >
+            <SignInButton>
               <Button variant={"outline"}>Sign In</Button>
             </SignInButton>
           </SignedOut>
-            <SignedIn>
-              <UserButton appearance={{
+          <SignedIn>
+            <UserButton
+              appearance={{
                 elements: {
-                  avatarBox: 'w-10 h-10',
-                  userButtonPopoverCard: 'shadow-xl',
-                  userPreviewMainIdentifier: 'font-bold',
-                }
-              }}/>
-            </SignedIn>
+                  avatarBox: "w-10 h-10",
+                  userButtonPopoverCard: "shadow-xl",
+                  userPreviewMainIdentifier: "font-bold",
+                },
+              }}
+            />
+          </SignedIn>
           <Button className="rounded-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-md hover:shadow-lg">
             Get Started
             <ChevronRight className="ml-1 size-4" />
@@ -214,4 +230,5 @@ export function SiteHeader() {
       </AnimatePresence>
     </header>
   );
-}
+};
+export default SiteHeader;
