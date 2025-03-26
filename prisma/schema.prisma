@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,60 +8,271 @@ datasource db {
 }
 
 model User {
-  id                String     @id @default(uuid())
-  clerkUserID       String     @unique
-  email             String     @unique
-  name              String?
-  imageUrl          String?
-  industry          String?
-  industryInsight   IndustryInsight? @relation(fields:[industry],references:[industry])
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  id              String           @id @default(uuid())
+  clerkUserID     String           @unique
+  email           String           @unique
+  name            String?
+  imageUrl        String?
+  industry        String?
+  industryInsight IndustryInsight? @relation(fields: [industry], references: [industry])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  bio               String?
-  experience        Int?
-  skills            String[]
+  bio             String?
+  experience      Int?
+  skills          String[]
 
-  assessments       Assessments[]
-
+  assessments      Assessments[]
+  questionAttempts QuestionAttempt[]
+  savedQuestions   SavedQuestion[]
+  progress         UserProgress[]
 }
 
-model Assessments{
-  id                String    @id @default(cuid())
-  userId            String     
-  user              User      @relation(fields:[userId], references: [id]) 
-  quizScore         Float     
-  questions          Json[]
-  category           String?
-  improvementTip     String?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+model Assessments {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  quizScore      Float
+  questions      Json[]
+  category       String?
+  improvementTip String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([userId])
 }
-model IndustryInsight{
-  id               String   @id @default(cuid())
-  industry         String   @unique
+
+model IndustryInsight {
+  id                String        @id @default(cuid())
+  industry          String        @unique
   users             User[]
   salaryRanges      Json[]
-  growthRate       Float
-  demandLevel      DemandLevel
+  growthRate        Float
+  demandLevel       DemandLevel
   topSkills         String[]
   marketOutlook     MarketOutlook
-  keyTrends          String[]
-  recommendedSkills    String[]
-  lastUpdated          DateTime    @default(now())
-  nextUpdated          DateTime
-  @@index ([industry])
+  keyTrends         String[]
+  recommendedSkills String[]
+  lastUpdated       DateTime      @default(now())
+  nextUpdated       DateTime
+
+  @@index([industry])
 }
+
 enum DemandLevel {
   HIGH
-  MEDIUM  
+  MEDIUM
   LOW
 }
 
 enum MarketOutlook {
-  POSITIVE 
-  NEUTRAL 
+  POSITIVE
+  NEUTRAL
   NEGATIVE
+}
+
+model Course {
+  id           String     @id @default(cuid())
+  name         String
+  code         String?
+  description  String?
+  university   University @relation(fields: [universityId], references: [id])
+  universityId String
+  subjects     Subject[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([name, universityId])
+}
+
+model University {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  shortName  String      @unique
+  courses    Course[]
+  pastPapers PastPaper[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Subject {
+  id           String         @id @default(cuid())
+  name         String
+  code         String?
+  course       Course         @relation(fields: [courseId], references: [id])
+  courseId     String
+  questions    Question[]
+  media        Media[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  userProgress UserProgress[]
+
+  @@unique([name, courseId])
+}
+
+model Question {
+  id              String          @id @default(cuid())
+  type            QuestionType
+  text            String
+  subject         Subject         @relation(fields: [subjectId], references: [id])
+  subjectId       String
+  difficulty      Difficulty
+  topic           String?
+  tags            String[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Question type specific relations
+  mcqData         MCQData?
+  shortAnswerData ShortAnswerData?
+  longAnswerData  LongAnswerData?
+
+  // Relationships
+  attempts        QuestionAttempt[]
+  pastPapers      PastPaperQuestion[]
+  savedBy         SavedQuestion[]
+
+  @@index([subjectId])
+  @@index([difficulty])
+  @@index([type])
+}
+
+model MCQData {
+  id              String          @id @default(cuid())
+  question        Question        @relation(fields: [questionId], references: [id])
+  questionId      String          @unique
+  options         Json            // Array of options
+  correctAnswer   String
+  explanation     String
+  distractorAnalysis String?      // Why wrong options are wrong
+}
+
+model ShortAnswerData {
+  id              String          @id @default(cuid())
+  question        Question        @relation(fields: [questionId], references: [id])
+  questionId      String          @unique
+  sampleAnswer    String
+  keywords        String[]        // Important keywords for grading
+  explanation     String
+}
+
+model LongAnswerData {
+  id              String          @id @default(cuid())
+  question        Question        @relation(fields: [questionId], references: [id])
+  questionId      String          @unique
+  rubric          Json            // Grading rubric
+  sampleAnswer    String
+  keyPoints       String[]        // Important points to include
+}
+
+enum QuestionType {
+  MCQ
+  SHORT_ANSWER
+  LONG_ANSWER
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model PastPaper {
+  id           String              @id @default(cuid())
+  title        String
+  university   University          @relation(fields: [universityId], references: [id])
+  universityId String
+  year         String
+  semester     Semester
+  questions    PastPaperQuestion[]
+  duration     String
+  downloads    Int                 @default(0)
+  color        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+enum Semester {
+  SPRING
+  FALL
+  WINTER
+  SUMMER
+}
+
+model PastPaperQuestion {
+  id          String    @id @default(cuid())
+  pastPaper   PastPaper @relation(fields: [pastPaperId], references: [id])
+  pastPaperId String
+  question    Question  @relation(fields: [questionId], references: [id])
+  questionId  String
+  marks       Int?
+  createdAt   DateTime  @default(now())
+
+  @@unique([pastPaperId, questionId])
+}
+
+model Media {
+  id        String    @id @default(cuid())
+  subject   Subject   @relation(fields: [subjectId], references: [id])
+  subjectId String
+  type      MediaType
+  title     String
+  url       String
+  thumbnail String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+enum MediaType {
+  VIDEO
+  IMAGE
+  DOCUMENT
+}
+
+model QuestionAttempt {
+  id             String    @id @default(cuid())
+  user           User      @relation(fields: [userId], references: [id])
+  userId         String
+  question       Question  @relation(fields: [questionId], references: [id])
+  questionId     String
+  isCorrect      Boolean
+  selectedAnswer String?
+  timeSpent      Int? // in seconds
+  feedback       Feedback?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+  @@index([questionId])
+}
+
+enum Feedback {
+  HELPFUL
+  NOT_HELPFUL
+  REPORTED
+}
+
+model SavedQuestion {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  question   Question @relation(fields: [questionId], references: [id])
+  questionId String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, questionId])
+}
+
+model UserProgress {
+  id                 String    @id @default(cuid())
+  user               User      @relation(fields: [userId], references: [id])
+  userId             String
+  subject            Subject   @relation(fields: [subjectId], references: [id])
+  subjectId          String
+  questionsAttempted Int       @default(0)
+  correctAnswers     Int       @default(0)
+  lastAttempted      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([userId, subjectId])
 }

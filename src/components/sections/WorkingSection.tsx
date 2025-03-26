@@ -1,12 +1,18 @@
 "use client";
-import React from 'react';
-import {motion} from "framer-motion";
-import { Badge } from '../ui/badge';
+import React from "react";
+import { motion } from "framer-motion";
+import { Badge } from "../ui/badge";
 
 export const WorkingSection = () => {
   return (
-    <section className="w-full py-20 md:py-32 bg-muted/30 backdrop-blur-sm relative overflow-hidden">
-      <div className="absolute inset-0 -z-10 bg-grid-pattern-subtle"></div>
+    <section
+      className="w-full py-20 md:py-32 bg-muted/30 backdrop-blur-sm relative overflow-hidden"
+      aria-labelledby="process-heading"
+    >
+      <div
+        className="absolute inset-0 -z-10 bg-grid-pattern-subtle"
+        aria-hidden="true"
+      ></div>
 
       <div className="container px-4 md:px-6 relative">
         <motion.div
@@ -22,7 +28,10 @@ export const WorkingSection = () => {
           >
             How It Works
           </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+          <h2
+            id="process-heading"
+            className="text-3xl md:text-4xl font-bold tracking-tight"
+          >
             Simple Process, Powerful Results
           </h2>
           <p className="max-w-[800px] text-muted-foreground md:text-lg">
@@ -32,28 +41,16 @@ export const WorkingSection = () => {
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-8 md:gap-12 relative">
-          <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent -translate-y-1/2 z-0"></div>
+          <div
+            className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent -translate-y-1/2 z-0"
+            aria-hidden="true"
+          ></div>
 
           {[
-            {
-              step: "01",
-              title: "Create Account",
-              description:
-                "Sign up in seconds with just your email. No credit card required to get started.",
-            },
-            {
-              step: "02",
-              title: "Configure Workspace",
-              description:
-                "Customize your workspace to match your team's unique workflow and requirements.",
-            },
-            {
-              step: "03",
-              title: "Boost Productivity",
-              description:
-                "Start using our powerful features to streamline processes and achieve your goals.",
-            },
-          ].map((step, i) => (
+            { step: 1, title: "Step One", description: "Description for step one." },
+            { step: 2, title: "Step Two", description: "Description for step two." },
+            { step: 3, title: "Step Three", description: "Description for step three." },
+          ].map((step: { step: number; title: string; description: string }, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 20 }}
@@ -61,11 +58,13 @@ export const WorkingSection = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className="relative z-10 flex flex-col items-center text-center space-y-4"
+              role="listitem"
             >
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 300, damping: 10 }}
                 className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xl font-bold shadow-lg"
+                aria-hidden="true"
               >
                 {step.step}
               </motion.div>
@@ -77,4 +76,4 @@ export const WorkingSection = () => {
       </div>
     </section>
   );
-}
+};

@@ -8,7 +8,9 @@ import { PricingSection } from "@/components/sections/PricingSection";
 import { ContactSection } from "@/components/sections/ContactSection";
 import { CTASection } from "@/components/sections/CTASection";
 import { ScrollToTop } from "@/components/shared/ScrollToTop";
+import { AIAssistant } from "@/components/sections/AIAssistant";
 import "./globals.css";
+
 
 export default function HomePage() {
   return (
@@ -17,6 +19,7 @@ export default function HomePage() {
 
       {/* Features Section */}
       <FeaturesSection />
+      <AIAssistant/>
 
       {/* Testimonials Section */}
       <Testimonials />

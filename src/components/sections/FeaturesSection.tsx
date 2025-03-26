@@ -1,9 +1,12 @@
 "use client";
 import {
   BarChart,
+  BookOpen,
+  Code,
   Layers,
   MessageSquare,
   Shield,
+  Sparkles,
   Users,
   Zap,
 } from "lucide-react";
@@ -15,42 +18,43 @@ import { motion } from "framer-motion";
 export const FeaturesSection = () => {
   const features = [
     {
-      title: "Smart Automation",
+      title: "AI-Powered Question Generation",
       description:
-        "Automate repetitive tasks and workflows to save time and reduce errors.",
-      icon: <Zap className="size-5" />,
+        "Generate custom questions based on your course, subject, and difficulty level.",
+      icon: <Sparkles className="size-5" />,
     },
     {
-      title: "Advanced Analytics",
+      title: "Comprehensive Course Coverage",
       description:
-        "Gain valuable insights with real-time data visualization and reporting.",
-      icon: <BarChart className="size-5" />,
+        "Prepare for CSIT, BCA, BIM, and other popular courses in Nepal.",
+      icon: <BookOpen className="size-5" />,
     },
     {
-      title: "Team Collaboration",
+      title: "Interview Preparation",
       description:
-        "Work together seamlessly with integrated communication tools.",
+        "Practice with realistic interview questions and receive AI feedback.",
+      icon: <MessageSquare className="size-5" />,
+    },
+    {
+      title: "Mock Interviews",
+      description:
+        "Simulate real interview conditions with our AI-powered mock interview system.",
       icon: <Users className="size-5" />,
     },
     {
-      title: "Enterprise Security",
+      title: "Progress Tracking",
       description:
-        "Keep your data safe with end-to-end encryption and compliance features.",
-      icon: <Shield className="size-5" />,
-    },
-    {
-      title: "Seamless Integration",
-      description:
-        "Connect with your favorite tools through our extensive API ecosystem.",
+        "Monitor your improvement with detailed analytics and performance insights.",
       icon: <Layers className="size-5" />,
     },
     {
-      title: "24/7 Support",
+      title: "Coding Practice",
       description:
-        "Get help whenever you need it with our dedicated support team.",
-      icon: <MessageSquare className="size-5" />,
+        "Enhance your programming skills with interactive coding challenges.",
+      icon: <Code className="size-5" />,
     },
   ];
+
 
   const container = {
     hidden: { opacity: 0 },
@@ -68,11 +72,8 @@ export const FeaturesSection = () => {
   };
 
   return (
-    <section
-      id="features"
-      className="w-full py-20 md:py-32 relative overflow-hidden"
-    >
-      <div className="absolute inset-0 z-10 bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.08),transparent_70%)]"></div>
+    <section className="w-full py-20 md:py-32 relative overflow-hidden">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.08),transparent_70%)]"></div>
       <div className="container px-4 md:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -91,9 +92,8 @@ export const FeaturesSection = () => {
             Everything You Need to Succeed
           </h2>
           <p className="max-w-[800px] text-muted-foreground md:text-lg">
-            Our comprehensive platform provides all the tools you need to
-            streamline your workflow, boost productivity, and achieve your
-            goals.
+            Our comprehensive platform provides all the tools you need to excel
+            in your exams and interviews.
           </p>
         </motion.div>
 
@@ -112,7 +112,7 @@ export const FeaturesSection = () => {
               >
                 <Card className="h-full overflow-hidden border-border/10 bg-background/50 backdrop-blur-md shadow-md hover:shadow-lg transition-all duration-300">
                   <CardContent className="p-6 flex flex-col h-full">
-                    <div className="size-12 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary mb-4">
+                    <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
                       {feature.icon}
                     </div>
                     <h3 className="text-xl font-bold mb-2">{feature.title}</h3>

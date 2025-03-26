@@ -1,6 +1,6 @@
 export const industries = [
   {
-    id: 1,
+    id: "1",
     name: "Technology",
     subIndustries: [
       "softwareDevelopment",
@@ -12,7 +12,7 @@ export const industries = [
     ],
   },
   {
-    id: 2,
+    id: "2",
     name: "Healthcare",
     subIndustries: [
       "pharmaceuticals",
@@ -24,7 +24,7 @@ export const industries = [
     ],
   },
   {
-    id: 3,
+    id: "3",
     name: "Finance",
     subIndustries: [
       "banking",
@@ -36,7 +36,7 @@ export const industries = [
     ],
   },
   {
-    id: 4,
+    id: "4",
     name: "Education",
     subIndustries: [
       "k12Education",
@@ -48,7 +48,7 @@ export const industries = [
     ],
   },
   {
-    id: 5,
+    id: "5",
     name: "Retail",
     subIndustries: [
       "eCommerce",
@@ -60,7 +60,7 @@ export const industries = [
     ],
   },
   {
-    id: 6,
+    id: "6",
     name: "Energy",
     subIndustries: [
       "renewableEnergy",
@@ -72,7 +72,7 @@ export const industries = [
     ],
   },
   {
-    id: 7,
+    id: "7",
     name: "Manufacturing",
     subIndustries: [
       "automotiveManufacturing",
@@ -84,7 +84,7 @@ export const industries = [
     ],
   },
   {
-    id: 8,
+    id: "8",
     name: "Entertainment",
     subIndustries: [
       "filmProduction",
