@@ -1,4 +1,4 @@
-import { db } from "@/lib/prisma";
+import { db } from "@/lib/prisma"
 import { QuestionType, Difficulty } from "@prisma/client";
 
 interface CreateQuestionParams {
@@ -64,6 +64,10 @@ export const createQuestion = async (data: CreateQuestionParams) => {
           }
         : undefined,
     },
-    include: {},
+    include: {
+      mcqData: true,
+      shortAnswerData: true,
+      longAnswerData: true,
+    },
   });
 };

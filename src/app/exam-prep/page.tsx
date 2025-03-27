@@ -47,6 +47,9 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { AIAssistant } from "@/components/shared/ai-assistant";
+import { MediaSlider } from "@/components/shared/media-slider";
+import { QuestionFilter } from "@/components/shared/question-filter";
 import { useToast } from "@/hooks/use-toast";
 import {
   Accordion,
@@ -55,72 +58,136 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import Link from "next/link";
-import { generateAIQuestions } from "@/app/actions/generateQuestions"; // Adjust import path
-import { QuestionType, Difficulty } from "@prisma/client";
+import { generateAIQuestions } from "@/app/actions/generateQuestions";
+import { Question, QuestionType, Difficulty } from "@prisma/client";
+
+type QuestionWithExtras = Question & {
+  mcqData?: {
+    options: string[];
+    correctAnswer: string;
+    explanation: string;
+  } | null;
+  shortAnswerData?: {
+    sampleAnswer: string;
+    keywords: string[];
+    explanation: string;
+  } | null;
+  longAnswerData?: {
+    sampleAnswer: string;
+    keyPoints: string[];
+    rubric: Record<string, string>;
+    explanation: string;
+  } | null;
+};
 
 export default function ExamPrepPage() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<
-    "mcq" | "short-answer" | "long-answer"
-  >("mcq");
+  const [activeTab, setActiveTab] = useState<QuestionType>("MCQ");
   const [course, setCourse] = useState("");
   const [university, setUniversity] = useState("");
   const [subject, setSubject] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("MEDIUM");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAIAssistant, setShowAIAssistant] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState<any>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<{
+    question: string;
+    answer: string;
+  } | null>(null);
   const [numQuestions, setNumQuestions] = useState(10);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showPastQuestions, setShowPastQuestions] = useState(false);
+  const [activeFilters, setActiveFilters] = useState({
+    difficulty: "all",
+    popularity: "all",
+    relevance: "all",
+  });
+  const [generatedQuestions, setGeneratedQuestions] = useState<
+    QuestionWithExtras[]
+  >([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userSelections, setUserSelections] = useState<Record<string, string>>(
+    {}
+  );
+  const [showAnswers, setShowAnswers] = useState<Record<string, boolean>>({});
+
+  const handleFilterChange = (filters: {
+    difficulty: string;
+    popularity: string;
+    relevance: string;
+  }) => {
+    setActiveFilters(filters);
+    toast({
+      title: "Filters applied",
+      description: "Questions have been filtered based on your criteria.",
+    });
+  };
+
+  const handleShowExplanation = (question: string, answer: string) => {
+    setCurrentQuestion({ question, answer });
+    setShowAIAssistant(true);
+  };
 
   const handleGenerateQuestions = async () => {
-    // Validate inputs
     if (!course || !subject || !university) {
       toast({
         title: "Missing information",
         description:
-          "Please select a course, subject, and university before generating questions.",
+          "Please select a course, university, and subject before generating questions.",
         variant: "destructive",
       });
       return;
     }
 
     setIsGenerating(true);
+    setUserSelections({});
+    setShowAnswers({});
 
     try {
-      // Map tab to QuestionType
-      const questionTypeMap: Record<typeof activeTab, QuestionType> = {
-        mcq: "MCQ",
-        "short-answer": "SHORT_ANSWER",
-        "long-answer": "LONG_ANSWER",
-      };
-
-      // Generate questions using AI
       const questions = await generateAIQuestions({
         course,
         university,
         subject,
         difficulty,
         numQuestions,
-        type: questionTypeMap[activeTab],
+        type: "MCQ",
       });
 
-      setGeneratedQuestions(questions);
+      setGeneratedQuestions(
+        questions.map((question) => ({
+          ...question,
+          mcqData: question.mcqData
+            ? {
+                ...question.mcqData,
+                options: Array.isArray(question.mcqData.options)
+                  ? question.mcqData.options.filter(
+                      (option): option is string => typeof option === "string"
+                    )
+                  : [],
+              }
+            : null,
+          longAnswerData: question.longAnswerData
+            ? {
+                ...question.longAnswerData,
+                rubric:
+                  typeof question.longAnswerData.rubric === "object" &&
+                  question.longAnswerData.rubric !== null
+                    ? (question.longAnswerData.rubric as Record<string, string>)
+                    : {},
+                explanation: question.longAnswerData.explanation ?? "",
+              }
+            : null,
+        }))
+      );
       setCurrentQuestionIndex(0);
-      setCurrentQuestion(questions[0]);
-
       toast({
-        title: "Questions Generated",
-        description: `${numQuestions} ${difficulty} ${activeTab} questions for ${subject} have been generated.`,
+        title: "Questions generated",
+        description: `${questions.length} questions for ${subject} have been generated.`,
       });
     } catch (error) {
-      console.error("Error generating questions:", error);
       toast({
-        title: "Error",
-        description: "Failed to generate questions. Please try again.",
+        title: "Error generating questions",
+        description:
+          error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
     } finally {
@@ -129,174 +196,83 @@ export default function ExamPrepPage() {
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < generatedQuestions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-      setCurrentQuestion(generatedQuestions[currentQuestionIndex + 1]);
+    const filteredQuestions = generatedQuestions.filter(
+      (q) => q.type === activeTab
+    );
+    if (currentQuestionIndex < filteredQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
   };
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prev) => prev - 1);
-      setCurrentQuestion(generatedQuestions[currentQuestionIndex - 1]);
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
 
-  const handleFilterChange = (filters: any) => {
-    // Handle filter changes
-    console.log(filters);
-  };
+  const filteredQuestions = generatedQuestions.filter(
+    (q) => q.type === activeTab
+  );
+  const currentQuestionData = filteredQuestions[currentQuestionIndex];
 
-  const renderQuestionContent = () => {
-    if (!currentQuestion) return null;
-
-    switch (activeTab) {
-      case "mcq":
-        return renderMCQQuestion();
-      case "short-answer":
-        return renderShortAnswerQuestion();
-      case "long-answer":
-        return renderLongAnswerQuestion();
-      default:
-        return null;
-    }
-  };
-
-  const renderMCQQuestion = () => {
-    const mcqData = currentQuestion.mcqData;
-    if (!mcqData) return null;
-
-    return (
-      <div className="space-y-6">
-        <div className="p-4 rounded-lg border border-border/10 bg-background/80">
-          <p className="font-medium">{currentQuestion.text}</p>
-        </div>
-
-        <RadioGroup defaultValue="" className="space-y-3">
-          {mcqData.options.map((option: string, index: number) => (
-            <div
-              key={index}
-              className="flex items-center space-x-2 p-3 rounded-lg border"
-            >
-              <RadioGroupItem value={option} id={`option-${index}`} />
-              <Label
-                htmlFor={`option-${index}`}
-                className="flex-1 cursor-pointer"
-              >
-                {option}
-              </Label>
-            </div>
-          ))}
-        </RadioGroup>
-
-        <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
-          <div className="flex items-start gap-2">
-            <div className="mt-0.5">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-            </div>
-            <div>
-              <h4 className="font-medium text-green-500">Correct Answer</h4>
-              <p className="text-sm mt-1">{mcqData.correctAnswer}</p>
-              <p className="text-sm mt-2">{mcqData.explanation}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderShortAnswerQuestion = () => {
-    const shortAnswerData = currentQuestion.shortAnswerData;
-    if (!shortAnswerData) return null;
-
-    return (
-      <div className="space-y-6">
-        <div className="p-4 rounded-lg border border-border/10 bg-background/80">
-          <p className="font-medium">{currentQuestion.text}</p>
-        </div>
-
-        <div className="p-4 rounded-lg border border-blue-500/20 bg-blue-500/10">
-          <h4 className="font-medium text-blue-500">Sample Answer</h4>
-          <p className="text-sm mt-1">{shortAnswerData.sampleAnswer}</p>
-
-          <h4 className="font-medium text-blue-500 mt-4">Key Keywords</h4>
-          <ul className="list-disc list-inside text-sm">
-            {shortAnswerData.keywords.map((keyword: string, index: number) => (
-              <li key={index}>{keyword}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
-          <h4 className="font-medium text-green-500">Explanation</h4>
-          <p className="text-sm mt-1">{shortAnswerData.explanation}</p>
-        </div>
-      </div>
-    );
-  };
-
-  const renderLongAnswerQuestion = () => {
-    const longAnswerData = currentQuestion.longAnswerData;
-    if (!longAnswerData) return null;
-
-    return (
-      <div className="space-y-6">
-        <div className="p-4 rounded-lg border border-border/10 bg-background/80">
-          <p className="font-medium">{currentQuestion.text}</p>
-        </div>
-
-        <div className="p-4 rounded-lg border border-blue-500/20 bg-blue-500/10">
-          <h4 className="font-medium text-blue-500">Key Points to Address</h4>
-          <ul className="list-disc list-inside text-sm">
-            {longAnswerData.keyPoints.map((point: string, index: number) => (
-              <li key={index}>{point}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
-          <h4 className="font-medium text-green-500">
-            Sample Answer Structure
-          </h4>
-          <p className="text-sm mt-1">{longAnswerData.sampleAnswer}</p>
-        </div>
-      </div>
-    );
-  };
+  const mediaItems = [
+    {
+      type: "video" as const,
+      title: "Understanding Object-Oriented Programming",
+      src: "https://www.youtube.com/embed/PFmuCDHHpwk",
+      thumbnail: "/placeholder.svg?height=200&width=320",
+    },
+    {
+      type: "image" as const,
+      title: "Java Class Hierarchy Diagram",
+      src: "/placeholder.svg?height=200&width=320",
+    },
+    {
+      type: "video" as const,
+      title: "Inheritance vs Polymorphism",
+      src: "https://www.youtube.com/embed/0xw06loTm1k",
+      thumbnail: "/placeholder.svg?height=200&width=320",
+    },
+    {
+      type: "image" as const,
+      title: "Method Overriding Example",
+      src: "/placeholder.svg?height=200&width=320",
+    },
+  ];
 
   const pastPapers = [
     {
       id: 1,
-      title: "Data Structures",
+      title: "BCA 3rd Semester - Object-Oriented Programming",
       university: "Tribhuvan University",
-      year: "2079",
-      semester: "First",
-      questions: 10,
+      year: "2022",
+      semester: "Spring",
+      questions: 7,
       duration: "3 hours",
       downloads: 1245,
-      color: "#3b82f6",
+      color: "#3B82F6",
     },
     {
       id: 2,
-      title: "Database Systems",
-      university: "Pokhara University",
-      year: "2078",
-      semester: "Second",
+      title: "BSc.CSIT 4th Semester - Database Management Systems",
+      university: "Tribhuvan University",
+      year: "2022",
+      semester: "Fall",
       questions: 8,
       duration: "3 hours",
       downloads: 987,
-      color: "#10b981",
+      color: "#10B981",
     },
     {
       id: 3,
-      title: "Computer Networks",
-      university: "Kathmandu University",
-      year: "2080",
-      semester: "First",
-      questions: 12,
-      duration: "4 hours",
-      downloads: 1567,
-      color: "#8b5cf6",
+      title: "BIM 3rd Semester - Web Technology",
+      university: "Pokhara University",
+      year: "2022",
+      semester: "Spring",
+      questions: 6,
+      duration: "3 hours",
+      downloads: 756,
+      color: "#F59E0B",
     },
   ];
 
@@ -314,6 +290,325 @@ export default function ExamPrepPage() {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 },
   };
+
+  const renderMCQContent = (question: QuestionWithExtras) => {
+    if (!question.mcqData) return null;
+
+    const { id, text, mcqData } = question;
+    const { options, correctAnswer, explanation } = mcqData;
+    const hasAnswered = showAnswers[id];
+    const userAnswer = userSelections[id];
+
+    return (
+      <div className="space-y-6">
+        <div className="p-4 rounded-lg border border-border/10 bg-background/80">
+          <p className="font-medium">{text}</p>
+        </div>
+
+        <RadioGroup
+          value={userAnswer}
+          onValueChange={(value) =>
+            setUserSelections((prev) => ({ ...prev, [id]: value }))
+          }
+          className="space-y-3"
+        >
+          {options.map((option, index) => {
+            const isCorrect = option === correctAnswer;
+            const isSelected = userAnswer === option;
+            let borderColor = "border-border/10";
+            let bgColor = "bg-background/80";
+
+            if (hasAnswered) {
+              if (isCorrect) {
+                borderColor = "border-green-500";
+                bgColor = "bg-green-500/10";
+              } else if (isSelected) {
+                borderColor = "border-red-500";
+                bgColor = "bg-red-500/10";
+              }
+            }
+
+            return (
+              <div
+                key={index}
+                className={`flex items-center space-x-2 p-3 rounded-lg border ${borderColor} ${bgColor}`}
+              >
+                <RadioGroupItem
+                  value={option}
+                  id={`option-${index}-${id}`}
+                  disabled={hasAnswered}
+                />
+                <Label
+                  htmlFor={`option-${index}-${id}`}
+                  className="flex-1 cursor-pointer"
+                >
+                  {option}
+                </Label>
+                {hasAnswered && isCorrect && (
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                )}
+                {hasAnswered && isSelected && !isCorrect && (
+                  <X className="h-5 w-5 text-red-500" />
+                )}
+              </div>
+            );
+          })}
+        </RadioGroup>
+
+        {hasAnswered && (
+          <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-green-500">
+                  {userAnswer === correctAnswer ? "Correct!" : "Incorrect"}
+                </h4>
+                <p className="text-sm mt-1">{explanation}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 text-primary"
+                  onClick={() =>
+                    handleShowExplanation(
+                      text,
+                      `${correctAnswer}\n\n${explanation}`
+                    )
+                  }
+                >
+                  <Brain className="mr-1 h-4 w-4" /> Explain Further
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!hasAnswered && userAnswer && (
+          <Button
+            className="w-full"
+            onClick={() => setShowAnswers((prev) => ({ ...prev, [id]: true }))}
+          >
+            Check Answer
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  const renderShortAnswerContent = (question: QuestionWithExtras) => {
+    if (!question.shortAnswerData) return null;
+
+    const { id, text, shortAnswerData } = question;
+    const { sampleAnswer, keywords, explanation } = shortAnswerData;
+
+    return (
+      <div className="space-y-6">
+        <div className="p-4 rounded-lg border border-border/10 bg-background/80">
+          <p className="font-medium">{text}</p>
+        </div>
+
+        <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-green-500">Model Answer</h4>
+              <p className="text-sm mt-1">{sampleAnswer}</p>
+              <div className="mt-2">
+                <h5 className="text-sm font-medium">Keywords:</h5>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {keywords.map((keyword, index) => (
+                    <Badge key={index} variant="outline">
+                      {keyword}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <p className="text-sm mt-2">{explanation}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 text-primary"
+                onClick={() =>
+                  handleShowExplanation(
+                    text,
+                    `${sampleAnswer}\n\nKeywords: ${keywords.join(
+                      ", "
+                    )}\n\n${explanation}`
+                  )
+                }
+              >
+                <Brain className="mr-1 h-4 w-4" /> Explain Further
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderLongAnswerContent = (question: QuestionWithExtras) => {
+    if (!question.longAnswerData) return null;
+
+    const { id, text, longAnswerData } = question;
+    const { sampleAnswer, keyPoints, rubric, explanation } = longAnswerData;
+
+    return (
+      <div className="space-y-6">
+        <div className="p-4 rounded-lg border border-border/10 bg-background/80">
+          <p className="font-medium">{text}</p>
+        </div>
+
+        <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-green-500">Model Answer</h4>
+              <p className="text-sm mt-1">{sampleAnswer}</p>
+              <h5 className="font-medium mt-3">Key Points</h5>
+              <ul className="list-disc pl-5 text-sm mt-1 space-y-1">
+                {keyPoints.map((point, index) => (
+                  <li key={index}>{point}</li>
+                ))}
+              </ul>
+              <h5 className="font-medium mt-3">Rubric</h5>
+              <div className="space-y-2 text-sm mt-1">
+                {Object.entries(rubric).map(([criteria, description]) => (
+                  <div key={criteria}>
+                    <strong>{criteria}:</strong> {description}
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm mt-2">{explanation}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 text-primary"
+                onClick={() =>
+                  handleShowExplanation(
+                    text,
+                    `${sampleAnswer}\n\nKey Points:\n${keyPoints.join(
+                      "\n"
+                    )}\n\nRubric:\n${Object.entries(rubric)
+                      .map(([k, v]) => `${k}: ${v}`)
+                      .join("\n")}\n\n${explanation}`
+                  )
+                }
+              >
+                <Brain className="mr-1 h-4 w-4" /> Explain Further
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderReferenceSection = () => (
+    <div className="space-y-6">
+      <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-bold">
+            Reference Materials
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MediaSlider items={mediaItems} className="mb-4" />
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+              <h4 className="font-medium flex items-center gap-2 mb-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                <span>Key Resources</span>
+              </h4>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start gap-2">
+                  <div className="mt-0.5">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  </div>
+                  <span>Java Documentation: OOP Concepts</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="mt-0.5">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  </div>
+                  <span>Design Patterns in Java</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="mt-0.5">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  </div>
+                  <span>SOLID Principles of OOP</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+              <h4 className="font-medium flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4 text-amber-500" />
+                <span>Related Topics</span>
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="bg-muted/50">
+                  Design Patterns
+                </Badge>
+                <Badge variant="outline" className="bg-muted/50">
+                  SOLID Principles
+                </Badge>
+                <Badge variant="outline" className="bg-muted/50">
+                  Interfaces
+                </Badge>
+                <Badge variant="outline" className="bg-muted/50">
+                  Abstract Classes
+                </Badge>
+              </div>
+            </div>
+
+            <Button variant="outline" className="w-full rounded-full">
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Ask AI for More Help
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-bold">Exam Tips</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
+              <div className="flex items-start gap-2">
+                <div className="mt-0.5">
+                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-amber-500">
+                    Writing Tips
+                  </h4>
+                  <ul className="mt-1 space-y-1 text-xs">
+                    <li>Structure your answer with clear headings</li>
+                    <li>Include practical examples with code snippets</li>
+                    <li>Explain how concepts contribute to software quality</li>
+                    <li>Summarize collective benefits of principles</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+              <h4 className="font-medium flex items-center gap-2 mb-2">
+                <Clock className="h-4 w-4 text-primary" />
+                <span>Time Management</span>
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Allocate 18-20 minutes for 10-mark questions, 8-10 minutes for
+                5-mark questions.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   return (
     <div className="container py-8 space-y-8">
@@ -359,12 +654,12 @@ export default function ExamPrepPage() {
                   <SelectValue placeholder="Select course" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bca">BCA</SelectItem>
-                  <SelectItem value="bsccsit">BSc.CSIT</SelectItem>
-                  <SelectItem value="bim">BIM</SelectItem>
-                  <SelectItem value="bit">BIT</SelectItem>
-                  <SelectItem value="be-computer">BE Computer</SelectItem>
-                  <SelectItem value="mca">MCA</SelectItem>
+                  <SelectItem value="BCA">BCA</SelectItem>
+                  <SelectItem value="BSc.CSIT">BSc.CSIT</SelectItem>
+                  <SelectItem value="BIM">BIM</SelectItem>
+                  <SelectItem value="BIT">BIT</SelectItem>
+                  <SelectItem value="BE Computer">BE Computer</SelectItem>
+                  <SelectItem value="MCA">MCA</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -376,14 +671,24 @@ export default function ExamPrepPage() {
                   <SelectValue placeholder="Select university" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="tu">Tribhuvan University (TU)</SelectItem>
-                  <SelectItem value="pu">Pokhara University (PU)</SelectItem>
-                  <SelectItem value="ku">Kathmandu University (KU)</SelectItem>
-                  <SelectItem value="purbanchal">
+                  <SelectItem value="Tribhuvan University">
+                    Tribhuvan University (TU)
+                  </SelectItem>
+                  <SelectItem value="Pokhara University">
+                    Pokhara University (PU)
+                  </SelectItem>
+                  <SelectItem value="Kathmandu University">
+                    Kathmandu University (KU)
+                  </SelectItem>
+                  <SelectItem value="Purbanchal University">
                     Purbanchal University
                   </SelectItem>
-                  <SelectItem value="mwu">Mid-Western University</SelectItem>
-                  <SelectItem value="fwu">Far-Western University</SelectItem>
+                  <SelectItem value="Mid-Western University">
+                    Mid-Western University
+                  </SelectItem>
+                  <SelectItem value="Far-Western University">
+                    Far-Western University
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -395,18 +700,28 @@ export default function ExamPrepPage() {
                   <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="oop-java">OOP in Java</SelectItem>
-                  <SelectItem value="data-structures">
+                  <SelectItem value="Object-Oriented Programming">
+                    OOP in Java
+                  </SelectItem>
+                  <SelectItem value="Data Structures">
                     Data Structures
                   </SelectItem>
-                  <SelectItem value="database">Database Systems</SelectItem>
-                  <SelectItem value="networks">Computer Networks</SelectItem>
-                  <SelectItem value="web-tech">Web Technology</SelectItem>
-                  <SelectItem value="os">Operating Systems</SelectItem>
-                  <SelectItem value="software-engineering">
+                  <SelectItem value="Database Systems">
+                    Database Systems
+                  </SelectItem>
+                  <SelectItem value="Computer Networks">
+                    Computer Networks
+                  </SelectItem>
+                  <SelectItem value="Web Technology">Web Technology</SelectItem>
+                  <SelectItem value="Operating Systems">
+                    Operating Systems
+                  </SelectItem>
+                  <SelectItem value="Software Engineering">
                     Software Engineering
                   </SelectItem>
-                  <SelectItem value="ai">Artificial Intelligence</SelectItem>
+                  <SelectItem value="Artificial Intelligence">
+                    Artificial Intelligence
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -429,7 +744,10 @@ export default function ExamPrepPage() {
           <div className="grid gap-6 md:grid-cols-3 mt-6">
             <div className="space-y-2">
               <Label htmlFor="difficulty">Difficulty Level</Label>
-              <Select value={difficulty} onValueChange={(value) => setDifficulty(value as Difficulty)}>
+              <Select
+                value={difficulty}
+                onValueChange={(value) => setDifficulty(value as Difficulty)}
+              >
                 <SelectTrigger id="difficulty" className="rounded-md">
                   <SelectValue placeholder="Select difficulty" />
                 </SelectTrigger>
@@ -470,23 +788,25 @@ export default function ExamPrepPage() {
           </div>
 
           <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="past-questions"
-                checked={showPastQuestions}
-                onCheckedChange={setShowPastQuestions}
-              />
-              <Label htmlFor="past-questions">Show Past Questions</Label>
+            <QuestionFilter onFilterChange={handleFilterChange} />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="past-questions"
+                  checked={showPastQuestions}
+                  onCheckedChange={setShowPastQuestions}
+                />
+                <Label htmlFor="past-questions">Show Past Questions</Label>
+              </div>
+              <Button
+                variant="outline"
+                className="rounded-full"
+                onClick={() => setShowPastQuestions(!showPastQuestions)}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Past Papers
+              </Button>
             </div>
-
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => setShowPastQuestions(!showPastQuestions)}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              Past Papers
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -583,248 +903,247 @@ export default function ExamPrepPage() {
         </motion.div>
       )}
 
-      <Tabs
-        defaultValue="mcq"
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value as typeof activeTab)}
-        className="w-full"
-      >
-        <div className="flex justify-center mb-8">
-          <TabsList className="rounded-full">
-            <TabsTrigger value="mcq" className="rounded-full">
-              Multiple Choice
-            </TabsTrigger>
-            <TabsTrigger value="short-answer" className="rounded-full">
-              Short Answer
-            </TabsTrigger>
-            <TabsTrigger value="long-answer" className="rounded-full">
-              Long Answer
-            </TabsTrigger>
-          </TabsList>
-        </div>
+      {generatedQuestions.length > 0 && (
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            setActiveTab(value as QuestionType);
+            setCurrentQuestionIndex(0);
+          }}
+          className="w-full"
+        >
+          <div className="flex justify-center mb-8">
+            <TabsList className="rounded-full">
+              <TabsTrigger value="MCQ" className="rounded-full">
+                Multiple Choice
+              </TabsTrigger>
+              <TabsTrigger value="SHORT_ANSWER" className="rounded-full">
+                Short Answer
+              </TabsTrigger>
+              <TabsTrigger value="LONG_ANSWER" className="rounded-full">
+                Long Answer
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="mcq">
-          <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl font-bold">
-                  {activeTab.replace("-", " ").toUpperCase()} Question
-                </CardTitle>
-                {generatedQuestions.length > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20"
-                  >
-                    Question {currentQuestionIndex + 1}/
-                    {generatedQuestions.length}
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {currentQuestion ? (
-                <>
-                  {renderQuestionContent()}
-                  <div className="flex gap-2 mt-6">
-                    <Button
-                      variant="outline"
-                      className="flex-1 rounded-full"
-                      onClick={handlePreviousQuestion}
-                      disabled={currentQuestionIndex === 0}
-                    >
-                      Previous Question
-                    </Button>
-                    <Button
-                      className="flex-1 rounded-full"
-                      onClick={handleNextQuestion}
-                      disabled={
-                        currentQuestionIndex === generatedQuestions.length - 1
-                      }
-                    >
-                      Next Question
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">
-                    No questions generated yet. Click "Generate Questions" to
-                    start.
-                  </p>
+          <TabsContent value="MCQ">
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="md:col-span-2 space-y-6">
+                <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-xl font-bold">
+                        Multiple Choice Question
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="bg-primary/10 text-primary border-primary/20"
+                        >
+                          Question {currentQuestionIndex + 1}/
+                          {filteredQuestions.length}
+                        </Badge>
+                        <Badge variant="outline">
+                          {currentQuestionData?.difficulty}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {currentQuestionData &&
+                      renderMCQContent(currentQuestionData)}
+                    <div className="flex gap-2 mt-6">
+                      <Button
+                        variant="outline"
+                        className="flex-1 rounded-full"
+                        onClick={handlePreviousQuestion}
+                        disabled={currentQuestionIndex === 0}
+                      >
+                        Previous Question
+                      </Button>
+                      <Button
+                        className="flex-1 rounded-full"
+                        onClick={handleNextQuestion}
+                        disabled={
+                          currentQuestionIndex === filteredQuestions.length - 1
+                        }
+                      >
+                        Next Question
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="rounded-full">
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    Helpful
+                  </Button>
+                  <Button variant="outline" size="sm" className="rounded-full">
+                    <ThumbsDown className="mr-2 h-4 w-4" />
+                    Not Helpful
+                  </Button>
                   <Button
-                    className="rounded-full"
-                    onClick={handleGenerateQuestions}
-                    disabled={isGenerating}
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full ml-auto"
                   >
-                    <Zap className="mr-2 h-4 w-4" />
-                    {isGenerating ? "Generating..." : "Generate Questions"}
+                    Report Issue
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="short-answer">
-          <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl font-bold">
-                  {activeTab.replace("-", " ").toUpperCase()} Question
-                </CardTitle>
-                {generatedQuestions.length > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20"
-                  >
-                    Question {currentQuestionIndex + 1}/
-                    {generatedQuestions.length}
-                  </Badge>
-                )}
               </div>
-            </CardHeader>
-            <CardContent>
-              {currentQuestion ? (
-                <>
-                  {renderQuestionContent()}
-                  <div className="flex gap-2 mt-6">
-                    <Button
-                      variant="outline"
-                      className="flex-1 rounded-full"
-                      onClick={handlePreviousQuestion}
-                      disabled={currentQuestionIndex === 0}
-                    >
-                      Previous Question
-                    </Button>
-                    <Button
-                      className="flex-1 rounded-full"
-                      onClick={handleNextQuestion}
-                      disabled={
-                        currentQuestionIndex === generatedQuestions.length - 1
-                      }
-                    >
-                      Next Question
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">
-                    No questions generated yet. Click "Generate Questions" to
-                    start.
-                  </p>
+              {renderReferenceSection()}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="SHORT_ANSWER">
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="md:col-span-2 space-y-6">
+                <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-xl font-bold">
+                        Short Answer Question
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="bg-primary/10 text-primary border-primary/20"
+                        >
+                          Question {currentQuestionIndex + 1}/
+                          {filteredQuestions.length}
+                        </Badge>
+                        <Badge variant="outline">
+                          {currentQuestionData?.difficulty}
+                        </Badge>
+                        <Badge variant="outline">5 Marks</Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {currentQuestionData &&
+                      renderShortAnswerContent(currentQuestionData)}
+                    <div className="flex gap-2 mt-6">
+                      <Button
+                        variant="outline"
+                        className="flex-1 rounded-full"
+                        onClick={handlePreviousQuestion}
+                        disabled={currentQuestionIndex === 0}
+                      >
+                        Previous Question
+                      </Button>
+                      <Button
+                        className="flex-1 rounded-full"
+                        onClick={handleNextQuestion}
+                        disabled={
+                          currentQuestionIndex === filteredQuestions.length - 1
+                        }
+                      >
+                        Next Question
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="rounded-full">
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    Helpful
+                  </Button>
+                  <Button variant="outline" size="sm" className="rounded-full">
+                    <ThumbsDown className="mr-2 h-4 w-4" />
+                    Not Helpful
+                  </Button>
                   <Button
-                    className="rounded-full"
-                    onClick={handleGenerateQuestions}
-                    disabled={isGenerating}
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full ml-auto"
                   >
-                    <Zap className="mr-2 h-4 w-4" />
-                    {isGenerating ? "Generating..." : "Generate Questions"}
+                    Report Issue
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="long-answer">
-          <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl font-bold">
-                  {activeTab.replace("-", " ").toUpperCase()} Question
-                </CardTitle>
-                {generatedQuestions.length > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20"
-                  >
-                    Question {currentQuestionIndex + 1}/
-                    {generatedQuestions.length}
-                  </Badge>
-                )}
               </div>
-            </CardHeader>
-            <CardContent>
-              {currentQuestion ? (
-                <>
-                  {renderQuestionContent()}
-                  <div className="flex gap-2 mt-6">
-                    <Button
-                      variant="outline"
-                      className="flex-1 rounded-full"
-                      onClick={handlePreviousQuestion}
-                      disabled={currentQuestionIndex === 0}
-                    >
-                      Previous Question
-                    </Button>
-                    <Button
-                      className="flex-1 rounded-full"
-                      onClick={handleNextQuestion}
-                      disabled={
-                        currentQuestionIndex === generatedQuestions.length - 1
-                      }
-                    >
-                      Next Question
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">
-                    No questions generated yet. Click "Generate Questions" to
-                    start.
-                  </p>
+              {renderReferenceSection()}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="LONG_ANSWER">
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="md:col-span-2 space-y-6">
+                <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-xl font-bold">
+                        Long Answer Question
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="bg-primary/10 text-primary border-primary/20"
+                        >
+                          Question {currentQuestionIndex + 1}/
+                          {filteredQuestions.length}
+                        </Badge>
+                        <Badge variant="outline">
+                          {currentQuestionData?.difficulty}
+                        </Badge>
+                        <Badge variant="outline">10 Marks</Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {currentQuestionData &&
+                      renderLongAnswerContent(currentQuestionData)}
+                    <div className="flex gap-2 mt-6">
+                      <Button
+                        variant="outline"
+                        className="flex-1 rounded-full"
+                        onClick={handlePreviousQuestion}
+                        disabled={currentQuestionIndex === 0}
+                      >
+                        Previous Question
+                      </Button>
+                      <Button
+                        className="flex-1 rounded-full"
+                        onClick={handleNextQuestion}
+                        disabled={
+                          currentQuestionIndex === filteredQuestions.length - 1
+                        }
+                      >
+                        Next Question
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="rounded-full">
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    Helpful
+                  </Button>
+                  <Button variant="outline" size="sm" className="rounded-full">
+                    <ThumbsDown className="mr-2 h-4 w-4" />
+                    Not Helpful
+                  </Button>
                   <Button
-                    className="rounded-full"
-                    onClick={handleGenerateQuestions}
-                    disabled={isGenerating}
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full ml-auto"
                   >
-                    <Zap className="mr-2 h-4 w-4" />
-                    {isGenerating ? "Generating..." : "Generate Questions"}
+                    Report Issue
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </div>
+              {renderReferenceSection()}
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
 
       {showAIAssistant && currentQuestion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">AI Assistant</h3>
-              <button onClick={() => setShowAIAssistant(false)}>
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Question</h4>
-                <p>{currentQuestion.text}</p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">AI Feedback</h4>
-                <p>This would be where the AI feedback appears...</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AIAssistant
+          initialQuestion={currentQuestion.question}
+          initialAnswer={currentQuestion.answer}
+          onClose={() => setShowAIAssistant(false)}
+        />
       )}
-    </div>
-  );
-}
-
-function QuestionFilter({
-  onFilterChange,
-}: {
-  onFilterChange: (filters: any) => void;
-}) {
-  return (
-    <div className="flex items-center space-x-2">
-      <span className="text-sm text-muted-foreground">Filters:</span>
-      {/* Filter components would go here */}
     </div>
   );
 }

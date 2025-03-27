@@ -10,7 +10,7 @@ export default function NotFound() {
             <p>Oops! The page you&apos;re looking for doesn&apos;t exist or has been moved.</p>
       
       <Link href="/">
-        <a>Go back home</a>
+        Go Back Home
       </Link>
       </div>
   );

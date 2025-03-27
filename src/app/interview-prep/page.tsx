@@ -14,8 +14,10 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
-  Video,
   Volume2,
+  Building,
+  GraduationCap,
+  Video,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,9 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Slider } from "@/components/ui/slider";
+import { AIAssistant } from "@/components/shared/ai-assistant";
+import { MediaSlider } from "@/components/shared/media-slider";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import Image from "next/image";
@@ -47,6 +52,13 @@ export default function InterviewPrepPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [answerSubmitted, setAnswerSubmitted] = useState(false);
   const [codeResponse, setCodeResponse] = useState("");
+  const [numQuestions, setNumQuestions] = useState(5);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState<{
+    question: string;
+    answer: string;
+  } | null>(null);
 
   const handleGenerateQuestions = () => {
     if (!course) {
@@ -58,10 +70,16 @@ export default function InterviewPrepPage() {
       return;
     }
 
-    toast({
-      title: "Generating interview questions",
-      description: `Creating interview questions for ${course} (${difficulty} difficulty)`,
-    });
+    setIsGenerating(true);
+
+    // Simulate question generation
+    setTimeout(() => {
+      setIsGenerating(false);
+      toast({
+        title: "Generating interview questions",
+        description: `Created ${numQuestions} interview questions for ${course} (${difficulty} difficulty)`,
+      });
+    }, 1500);
   };
 
   const handleSubmitAnswer = () => {
@@ -118,42 +136,55 @@ export default function InterviewPrepPage() {
     });
   };
 
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
+  const handleShowExplanation = (question: string, answer: string) => {
+    setCurrentQuestion({ question, answer });
+    setShowAIAssistant(true);
   };
 
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
-  };
+  const mediaItems = [
+    {
+      type: "video" as const,
+      title: "JavaScript Variable Declaration",
+      src: "https://www.youtube.com/embed/PFmuCDHHpwk",
+      thumbnail: "/placeholder.svg?height=200&width=320",
+    },
+    {
+      type: "image" as const,
+      title: "JavaScript Hoisting Diagram",
+      src: "/placeholder.svg?height=200&width=320",
+    },
+    {
+      type: "video" as const,
+      title: "Scope in JavaScript",
+      src: "https://www.youtube.com/embed/0xw06loTm1k",
+      thumbnail: "/placeholder.svg?height=200&width=320",
+    },
+  ];
 
   return (
     <div className="container py-8 space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Interview Preparation
-          </h1>
-          <p className="text-muted-foreground">
-            Practice with AI-generated interview questions and improve your
-            interview skills.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard">
-            <Button variant="outline" className="rounded-full">
-              Dashboard
-            </Button>
-          </Link>
-          <Link href="/mock-interview">
-            <Button className="rounded-full">Try Mock Interview</Button>
-          </Link>
+      <div className="relative">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.15),transparent_50%)]"></div>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Interview Preparation
+            </h1>
+            <p className="text-muted-foreground">
+              Practice with AI-generated interview questions and improve your
+              interview skills for Nepali tech companies.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard">
+              <Button variant="outline" className="rounded-full">
+                Dashboard
+              </Button>
+            </Link>
+            <Link href="/mock-interview">
+              <Button className="rounded-full">Try Mock Interview</Button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -220,6 +251,62 @@ export default function InterviewPrepPage() {
             </div>
           </div>
 
+          <div className="grid gap-6 md:grid-cols-2 mt-6">
+            <div className="space-y-2">
+              <Label htmlFor="num-questions">
+                Number of Questions ({numQuestions})
+              </Label>
+              <Slider
+                id="num-questions"
+                min={1}
+                max={20}
+                step={1}
+                value={[numQuestions]}
+                onValueChange={(value) => setNumQuestions(value[0])}
+                className="py-2"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Company Focus</Label>
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20"
+                >
+                  F1Soft
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20"
+                >
+                  Leapfrog
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20"
+                >
+                  Cotiviti
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20"
+                >
+                  Deerwalk
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20"
+                >
+                  Fusemachines
+                </Badge>
+                <Badge variant="outline" className="cursor-pointer">
+                  + Add
+                </Badge>
+              </div>
+            </div>
+          </div>
+
           <div className="mt-6 space-y-4">
             <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
               <div className="flex items-center space-x-2">
@@ -263,9 +350,10 @@ export default function InterviewPrepPage() {
             <Button
               className="w-full md:w-auto rounded-full"
               onClick={handleGenerateQuestions}
+              disabled={isGenerating}
             >
               <Sparkles className="mr-2 h-4 w-4" />
-              Generate Interview Questions
+              {isGenerating ? "Generating..." : "Generate Interview Questions"}
             </Button>
           </div>
         </CardContent>
