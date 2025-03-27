@@ -17,125 +17,118 @@ const QuestionGenerationParamsSchema = z.object({
 const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 
 const PROMPTS = {
-  UNIFIED: (
+  MCQ: (
     course: string,
     university: string,
     subject: string,
-    difficulty: string,
-    numQuestions: number
+    difficulty: string
   ) => `
-    Generate comprehensive question set for ${course} students at ${university} 
-    covering ${subject} with ${difficulty} complexity.
+    Generate a multiple choice question (MCQ) for ${course} students at ${university} 
+    studying ${subject} with ${difficulty} difficulty level. Follow these requirements:
 
-    Generate exactly ONE set of questions with THREE types:
-    1. Multiple Choice Question (MCQ)
-    2. Short Answer Question
-    3. Long Answer Question
+    1. Question must test conceptual understanding
+    2. Include 4 plausible options
+    3. Mark correct answer clearly
+    4. Add detailed explanation
+    5. Use real-world examples where applicable
 
-    IMPORTANT: Ensure questions are related and cover the same core academic concept.
-
-    Respond STRICTLY in this JSON format:
+    Format:
     {
-      "mcq": {
-        "question": "Precise MCQ text",
-        "options": ["Option A", "Option B", "Option C", "Option D"],
-        "correctAnswer": "Correct option text",
-        "explanation": "Comprehensive explanation"
+      "question": "...",
+      "options": ["...", "...", "...", "..."],
+      "correctAnswer": "...",
+      "explanation": "..."
+    }
+  `,
+
+  SHORT_ANSWER: (
+    course: string,
+    university: string,
+    subject: string,
+    difficulty: string
+  ) => `
+    Generate a short answer question for ${course} students at ${university} 
+    studying ${subject} with ${difficulty} difficulty. Requirements:
+
+    1. Require concise 2-3 paragraph answer
+    2. Include specific example requirement
+    3. List 3-5 key keywords
+    4. Provide model answer with example
+    5. Focus on application of concepts
+
+    Format:
+    {
+      "question": "...",
+      "sampleAnswer": "...",
+      "keywords": ["...", "...", "..."],
+      "explanation": "..."
+    }
+  `,
+
+  LONG_ANSWER: (
+    course: string,
+    university: string,
+    subject: string,
+    difficulty: string
+  ) => `
+    Generate a long answer question for ${course} students at ${university} 
+    studying ${subject} with ${difficulty} difficulty. Requirements:
+
+    1. Require comprehensive analysis
+    2. Include 2+ real-world examples
+    3. Minimum 5 key points in answer
+    4. Detailed grading rubric
+    5. Focus on critical thinking
+
+    Format:
+    {
+      "question": "...",
+      "sampleAnswer": "...",
+      "keyPoints": ["...", "...", "...", "...", "..."],
+      "rubric": {
+        "analysis": "...",
+        "examples": "...", 
+        "structure": "...",
+        "depth": "..."
       },
-      "shortAnswer": {
-        "question": "Focused short-answer question",
-        "sampleAnswer": "Concise 3-5 sentence analytical response",
-        "keywords": ["Key Concept 1", "Key Concept 2", "Key Concept 3"],
-        "explanation": "Brief rationale"
-      },
-      "longAnswer": {
-        "question": "Comprehensive long-form analytical question",
-        "sampleAnswer": "Structured in-depth response",
-        "keyPoints": [
-          "Critical analytical point 1", 
-          "Critical analytical point 2", 
-          "Critical analytical point 3", 
-          "Critical analytical point 4"
-        ],
-        "rubric": {
-          "comprehension": "Understanding criteria",
-          "analysis": "Critical thinking evaluation",
-          "integration": "Concept connection criteria",
-          "presentation": "Academic writing assessment"
-        },
-        "explanation": "Detailed question context"
-      }
+      "explanation": "..."
     }
   `,
 };
 
-function validateQuestionSet(questionSet: any): boolean {
+function validateQuestion(question: any, type: QuestionType): boolean {
   try {
-    if (!questionSet.mcq || !questionSet.shortAnswer || !questionSet.longAnswer)
-      return false;
-    if (
-      !questionSet.mcq.question ||
-      !questionSet.mcq.options ||
-      questionSet.mcq.options.length !== 4
-    )
-      return false;
-    if (
-      !questionSet.shortAnswer.question ||
-      !questionSet.shortAnswer.sampleAnswer
-    )
-      return false;
-    if (
-      !questionSet.longAnswer.question ||
-      !questionSet.longAnswer.sampleAnswer
-    )
-      return false;
-    return true;
+    if (type === "MCQ") {
+      return (
+        !!question.question &&
+        question.options?.length === 4 &&
+        question.correctAnswer &&
+        question.explanation
+      );
+    }
+    if (type === "SHORT_ANSWER") {
+      return (
+        !!question.question &&
+        !!question.sampleAnswer &&
+        question.keywords?.length >= 3 &&
+        question.explanation &&
+        question.sampleAnswer.includes("Example:")
+      );
+    }
+    if (type === "LONG_ANSWER") {
+      return (
+        !!question.question &&
+        !!question.sampleAnswer &&
+        question.keyPoints?.length >= 5 &&
+        question.rubric &&
+        question.explanation &&
+        (question.sampleAnswer.match(/Example/g) || []).length >= 2
+      );
+    }
+    return false;
   } catch (error) {
     return false;
   }
-}
-
-function createQuestionObjects(
-  questionSet: any,
-  subjectId: string,
-  difficulty: Difficulty
-) {
-  return [
-    {
-      type: "MCQ" as QuestionType,
-      text: questionSet.mcq.question,
-      difficulty,
-      subjectId,
-      mcqData: {
-        options: questionSet.mcq.options,
-        correctAnswer: questionSet.mcq.correctAnswer,
-        explanation: questionSet.mcq.explanation,
-      },
-    },
-    {
-      type: "SHORT_ANSWER" as QuestionType,
-      text: questionSet.shortAnswer.question,
-      difficulty,
-      subjectId,
-      shortAnswerData: {
-        sampleAnswer: questionSet.shortAnswer.sampleAnswer,
-        keywords: questionSet.shortAnswer.keywords,
-        explanation: questionSet.shortAnswer.explanation,
-      },
-    },
-    {
-      type: "LONG_ANSWER" as QuestionType,
-      text: questionSet.longAnswer.question,
-      difficulty,
-      subjectId,
-      longAnswerData: {
-        sampleAnswer: questionSet.longAnswer.sampleAnswer,
-        keyPoints: questionSet.longAnswer.keyPoints,
-        rubric: questionSet.longAnswer.rubric,
-        explanation: questionSet.longAnswer.explanation,
-      },
-    },
-  ];
 }
 
 export async function generateAIQuestions(
@@ -143,60 +136,72 @@ export async function generateAIQuestions(
 ) {
   try {
     const validatedParams = QuestionGenerationParamsSchema.parse(params);
-    const mappedDifficulty =
-      params.difficulty === "MIXED" ? "MEDIUM" : params.difficulty;
+    const { type, numQuestions, difficulty, course, university, subject } =
+      validatedParams;
 
-    const university = await db.university.upsert({
-      where: { name: params.university },
+    const universityRecord = await db.university.upsert({
+      where: { name: university },
       update: {},
-      create: {
-        name: params.university,
-        shortName: params.university.slice(0, 10),
-      },
+      create: { name: university, shortName: university.slice(0, 10) },
     });
 
-    const course = await db.course.upsert({
+    const courseRecord = await db.course.upsert({
       where: {
-        name_universityId: { name: params.course, universityId: university.id },
+        name_universityId: { name: course, universityId: universityRecord.id },
       },
       update: {},
-      create: { name: params.course, universityId: university.id },
+      create: { name: course, universityId: universityRecord.id },
     });
 
-    const subject = await db.subject.upsert({
-      where: { name_courseId: { name: params.subject, courseId: course.id } },
+    const subjectRecord = await db.subject.upsert({
+      where: { name_courseId: { name: subject, courseId: courseRecord.id } },
       update: {},
-      create: { name: params.subject, courseId: course.id },
+      create: { name: subject, courseId: courseRecord.id },
     });
 
     const model = geminiAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const questions = [];
 
-    for (let i = 0; i < params.numQuestions; i++) {
-      const prompt = PROMPTS.UNIFIED(
-        params.course,
-        params.university,
-        params.subject,
-        params.difficulty,
-        params.numQuestions
-      );
-
-      const result = await model.generateContent(prompt);
-      const content = result.response.text();
-      if (!content) continue;
-
+    for (let i = 0; i < numQuestions; i++) {
       try {
-        const questionSet = JSON.parse(
-          content.replace(/```(json)?/g, "").trim()
-        );
-        if (!validateQuestionSet(questionSet)) continue;
+        const prompt = PROMPTS[type](course, university, subject, difficulty);
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        const cleanedText = text.replace(/```(json)?/g, "").trim();
+        const questionData = JSON.parse(cleanedText);
 
-        const generatedQuestions = createQuestionObjects(
-          questionSet,
-          subject.id,
-          mappedDifficulty
-        );
-        questions.push(...generatedQuestions);
+        if (!validateQuestion(questionData, type)) continue;
+
+        const question = {
+          type,
+          text: questionData.question,
+          difficulty: difficulty === "MIXED" ? "MEDIUM" : difficulty,
+          subjectId: subjectRecord.id,
+          ...(type === "MCQ" && {
+            mcqData: {
+              options: questionData.options,
+              correctAnswer: questionData.correctAnswer,
+              explanation: questionData.explanation,
+            },
+          }),
+          ...(type === "SHORT_ANSWER" && {
+            shortAnswerData: {
+              sampleAnswer: questionData.sampleAnswer,
+              keywords: questionData.keywords,
+              explanation: questionData.explanation,
+            },
+          }),
+          ...(type === "LONG_ANSWER" && {
+            longAnswerData: {
+              sampleAnswer: questionData.sampleAnswer,
+              keyPoints: questionData.keyPoints,
+              rubric: questionData.rubric,
+              explanation: questionData.explanation,
+            },
+          }),
+        };
+
+        questions.push(question);
       } catch (error) {
         continue;
       }
