@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/shared/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import {SiteHeader} from "@/components/shared/site-header";
 import { SiteFooter } from "@/components/shared/site-footer";
-import "./globals.css";
+import "./globals.css"
 
 // Initialize Inter font
 const inter = Inter({

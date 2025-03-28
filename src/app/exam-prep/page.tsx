@@ -758,8 +758,6 @@ export default function ExamPrepPage() {
         </CardContent>
       </Card>
 
-      {renderProgressSection()}
-
       {generatedQuestions.length > 0 && (
         <Tabs
           value={activeTab}
@@ -929,6 +927,7 @@ export default function ExamPrepPage() {
           onClose={() => setShowAIAssistant(false)}
         />
       )}
+      {renderProgressSection()}
     </div>
   );
 }
