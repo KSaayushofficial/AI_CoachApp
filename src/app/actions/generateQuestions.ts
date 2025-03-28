@@ -17,40 +17,34 @@ const QuestionGenerationParamsSchema = z.object({
 const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 
 const PROMPTS = {
-  UNIFIED: (
-    course: string,
-    university: string,
-    subject: string,
-    difficulty: string,
-    numQuestions: number
-  ) => `
-    Generate comprehensive question set for ${course} students at ${university} 
-    covering ${subject} with ${difficulty} complexity.
+  UNIFIED: (course: string, university: string, subject: string, difficulty: string, numQuestions: number) => `
+    Generate a well-structured and diverse question set for ${course} students at ${university}, 
+    covering ${subject} at a ${difficulty} level.
 
-    Generate exactly ONE set of questions with THREE types:
-    1. Multiple Choice Question (MCQ)
-    2. Short Answer Question
-    3. Long Answer Question
+    Ensure each question set follows a standardized academic format and includes:
+    - A multiple-choice question (MCQ) with well-thought-out options and an explanation.
+    - A short-answer question designed to test conceptual clarity with keywords and explanations.
+    - A long-answer question that requires in-depth analysis, complete with key points and a grading rubric.
 
-    IMPORTANT: Ensure questions are related and cover the same core academic concept.
+    Present questions in the following JSON format:
 
-    Respond STRICTLY in this JSON format:
+    \`
     {
       "mcq": {
-        "question": "Precise MCQ text",
+        "question": "MCQ text clearly formulated",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": "Correct option text",
-        "explanation": "Comprehensive explanation"
+        "explanation": "Detailed explanation of why the correct answer is right. Include a relatable, funny real-life analogy to clarify the concept. Provide 2-3 additional examples that help reinforce understanding. Also, include practical applications of the concept to assist students in the best possible way."
       },
       "shortAnswer": {
-        "question": "Focused short-answer question",
+        "question": "Clearly framed short-answer question",
         "sampleAnswer": "Concise 3-5 sentence analytical response",
-        "keywords": ["Key Concept 1", "Key Concept 2", "Key Concept 3"],
-        "explanation": "Brief rationale"
+        "keywords": ["Relevant Keyword 1", "Relevant Keyword 2", "Relevant Keyword 3"],
+        "explanation": "Brief rationale behind the question. Include a simple, humorous real-life scenario to explain the concept. Provide 2-3 different examples to ensure clarity. Also, suggest an alternative approach to answering the question to assist students in fully grasping the idea."
       },
       "longAnswer": {
-        "question": "Comprehensive long-form analytical question",
-        "sampleAnswer": "Structured in-depth response",
+        "question": "Comprehensive analytical question requiring deep understanding",
+        "sampleAnswer": "Well-structured in-depth response",
         "keyPoints": [
           "Critical analytical point 1", 
           "Critical analytical point 2", 
@@ -58,16 +52,20 @@ const PROMPTS = {
           "Critical analytical point 4"
         ],
         "rubric": {
-          "comprehension": "Understanding criteria",
-          "analysis": "Critical thinking evaluation",
-          "integration": "Concept connection criteria",
-          "presentation": "Academic writing assessment"
+          "comprehension": "Evaluates understanding of core concepts",
+          "analysis": "Assesses depth of critical thinking",
+          "integration": "Measures connection to related topics and real-world application",
+          "presentation": "Examines clarity, structure, and academic rigor"
         },
-        "explanation": "Detailed question context"
+        "explanation": "Detailed context of the question to guide the student. Provide a practical real-world example that connects with students' everyday experiences. Include 2-3 additional unique variations of the question to deepen understanding. Also, ensure that a humor-based analogy or engaging story is used to make the concept memorable and easy to grasp."
       }
     }
+    \`
+
+    IMPORTANT: Ensure that all code responses are formatted properly inside code blocks to avoid jumbled output.
   `,
 };
+
 
 function validateQuestionSet(questionSet: any): boolean {
   try {

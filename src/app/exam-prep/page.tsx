@@ -310,7 +310,7 @@ export default function ExamPrepPage() {
   );
   const currentQuestionData = filteredQuestions[currentQuestionIndex];
 
-  const mediaItems = [
+  const mediaItems: { type: "video" | "image"; title: string; src: string; thumbnail?: string }[] = [
     {
       type: "video",
       title: "OOP Concepts",
@@ -575,6 +575,116 @@ export default function ExamPrepPage() {
     );
   };
 
+    const renderReferenceSection = () => (
+      <div>
+        <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold">
+              Reference Materials
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MediaSlider items={mediaItems} className="mb-4" />
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+                <h4 className="font-medium flex items-center gap-2 mb-2">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                  <span>Key Resources</span>
+                </h4>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    </div>
+                    <span>Java Documentation: OOP Concepts</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    </div>
+                    <span>Design Patterns in Java</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    </div>
+                    <span>SOLID Principles of OOP</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+                <h4 className="font-medium flex items-center gap-2 mb-2">
+                  <FileText className="h-4 w-4 text-amber-500" />
+                  <span>Related Topics</span>
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="bg-muted/50">
+                    Design Patterns
+                  </Badge>
+                  <Badge variant="outline" className="bg-muted/50">
+                    SOLID Principles
+                  </Badge>
+                  <Badge variant="outline" className="bg-muted/50">
+                    Interfaces
+                  </Badge>
+                  <Badge variant="outline" className="bg-muted/50">
+                    Abstract Classes
+                  </Badge>
+                </div>
+              </div>
+
+              <Button variant="outline" className="w-full rounded-full">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Ask AI for More Help
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold">Exam Tips</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5">
+                    <Lightbulb className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-amber-500">
+                      Writing Tips
+                    </h4>
+                    <ul className="mt-1 space-y-1 text-xs">
+                      <li>Structure your answer with clear headings</li>
+                      <li>Include practical examples with code snippets</li>
+                      <li>
+                        Explain how concepts contribute to software quality
+                      </li>
+                      <li>Summarize collective benefits of principles</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+                <h4 className="font-medium flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span>Time Management</span>
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Allocate 18-20 minutes for 10-mark questions, 8-10 minutes for
+                  5-mark questions.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+
   const renderProgressSection = () => (
     <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md mt-6">
       <CardHeader className="pb-2">
@@ -697,7 +807,16 @@ export default function ExamPrepPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Object-Oriented Programming">
-                    OOP
+                    OOP in Java
+                  </SelectItem>
+                  <SelectItem value="Data Structure & Algorithm">
+                    Data Structure & Algorithm
+                  </SelectItem>
+                  <SelectItem value="System Analysis & Design">
+                    System Analysis & Design
+                  </SelectItem>
+                  <SelectItem value="Probability & Statistics">
+                    Probability & Statistics
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -824,6 +943,7 @@ export default function ExamPrepPage() {
                   </CardContent>
                 </Card>
               </div>
+              {renderReferenceSection()}
             </div>
           </TabsContent>
 
@@ -870,6 +990,7 @@ export default function ExamPrepPage() {
                   </CardContent>
                 </Card>
               </div>
+              {renderReferenceSection()}
             </div>
           </TabsContent>
 
@@ -916,6 +1037,7 @@ export default function ExamPrepPage() {
                   </CardContent>
                 </Card>
               </div>
+              {renderReferenceSection()}
             </div>
           </TabsContent>
         </Tabs>
