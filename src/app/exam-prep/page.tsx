@@ -353,6 +353,7 @@ export default function ExamPrepPage() {
     const { options, correctAnswer, explanation } = mcqData;
     const hasAnswered = showAnswers[id];
     const userAnswer = userSelections[id];
+    
 
     return (
       <div className="space-y-6">
