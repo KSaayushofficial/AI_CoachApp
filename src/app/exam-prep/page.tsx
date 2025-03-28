@@ -503,7 +503,7 @@ export default function ExamPrepPage() {
   };
 
   const renderReferenceSection = () => (
-    <div className="space-y-6">
+<div>
       <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-bold">
