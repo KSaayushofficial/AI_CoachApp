@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   BookOpen,
   Brain,
@@ -51,16 +52,9 @@ import { AIAssistant } from "@/components/shared/ai-assistant";
 import { MediaSlider } from "@/components/shared/media-slider";
 import { QuestionFilter } from "@/components/shared/question-filter";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import Link from "next/link";
 import { generateAIQuestions } from "@/app/actions/generateQuestions";
 import { Question, QuestionType, Difficulty } from "@prisma/client";
-import { Skeleton } from "@/components/ui/skeleton";
 
 type QuestionWithExtras = Question & {
   mcqData?: {
@@ -181,65 +175,49 @@ export default function ExamPrepPage() {
     popularity: "all",
     relevance: "all",
   });
-  const [generatedQuestions, setGeneratedQuestions] = useState<
-    QuestionWithExtras[]
-  >([]);
+  const [generatedQuestions, setGeneratedQuestions] =
+    useState<QuestionWithExtras[]>(DUMMY_QUESTIONS);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userSelections, setUserSelections] = useState<Record<string, string>>(
     {}
   );
   const [showAnswers, setShowAnswers] = useState<Record<string, boolean>>({});
-    const [correctAnswers, setCorrectAnswers] = useState(0);
-    const [incorrectAnswers, setIncorrectAnswers] = useState(0);
-    const [answeredQuestions, setAnsweredQuestions] = useState<Set<string>>(
-      new Set()
-    );
-    const [strengths, setStrengths] = useState<string[]>([]);
-    const [weaknesses, setWeaknesses] = useState<string[]>([]);
+  const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [incorrectAnswers, setIncorrectAnswers] = useState(0);
+  const [answeredQuestions, setAnsweredQuestions] = useState<Set<string>>(
+    new Set()
+  );
+  const [strengths, setStrengths] = useState<string[]>([]);
+  const [weaknesses, setWeaknesses] = useState<string[]>([]);
 
-     const totalQuestions = generatedQuestions.length;
-     const completion = (answeredQuestions.size / totalQuestions) * 100;
-     const accuracy =
-       answeredQuestions.size > 0
-         ? Math.round((correctAnswers / answeredQuestions.size) * 100)
-         : 0;
+  const totalQuestions = generatedQuestions.length;
+  const completion = (answeredQuestions.size / totalQuestions) * 100;
+  const accuracy =
+    answeredQuestions.size > 0
+      ? Math.round((correctAnswers / answeredQuestions.size) * 100)
+      : 0;
 
-           const handleCheckAnswer = (
-             questionId: string,
-             isCorrect: boolean
-           ) => {
-             setShowAnswers((prev) => ({ ...prev, [questionId]: true }));
-             setAnsweredQuestions((prev) => new Set(prev.add(questionId)));
+  const handleCheckAnswer = (questionId: string, isCorrect: boolean) => {
+    setShowAnswers((prev) => ({ ...prev, [questionId]: true }));
+    setAnsweredQuestions((prev) => new Set(prev.add(questionId)));
 
-             if (isCorrect) {
-               setCorrectAnswers((prev) => prev + 1);
-               setStrengths((prev) => [...new Set([...prev, subject])]);
-             } else {
-               setIncorrectAnswers((prev) => prev + 1);
-               setWeaknesses((prev) => [...new Set([...prev, subject])]);
-             }
-           };
-
-           const renderQuestionCounter = () => (
-             <Badge
-               variant="outline"
-               className="bg-primary/10 text-primary border-primary/20"
-             >
-               Question {currentQuestionIndex + 1} of {filteredQuestions.length}
-             </Badge>
-           );
-
-  const handleFilterChange = (filters: {
-    difficulty: string;
-    popularity: string;
-    relevance: string;
-  }) => {
-    setActiveFilters(filters);
-    toast({
-      title: "Filters applied",
-      description: "Questions have been filtered based on your criteria.",
-    });
+    if (isCorrect) {
+      setCorrectAnswers((prev) => prev + 1);
+      setStrengths((prev) => [...new Set([...prev, subject])]);
+    } else {
+      setIncorrectAnswers((prev) => prev + 1);
+      setWeaknesses((prev) => [...new Set([...prev, subject])]);
+    }
   };
+
+  const renderQuestionCounter = () => (
+    <Badge
+      variant="outline"
+      className="bg-primary/10 text-primary border-primary/20"
+    >
+      Question {currentQuestionIndex + 1} of {filteredQuestions.length}
+    </Badge>
+  );
 
   const handleGenerateQuestions = async () => {
     if (!course || !subject || !university) {
@@ -256,8 +234,8 @@ export default function ExamPrepPage() {
     setUserSelections({});
     setShowAnswers({});
     setCorrectAnswers(0);
-     setIncorrectAnswers(0);
-     setAnsweredQuestions(new Set());
+    setIncorrectAnswers(0);
+    setAnsweredQuestions(new Set());
 
     try {
       const questions = await generateAIQuestions({
@@ -332,103 +310,50 @@ export default function ExamPrepPage() {
   );
   const currentQuestionData = filteredQuestions[currentQuestionIndex];
 
-  const mediaItems = [
+  const mediaItems: { type: "video" | "image"; title: string; src: string; thumbnail?: string }[] = [
     {
-      type: "video" as const,
-      title: "Understanding Object-Oriented Programming",
+      type: "video",
+      title: "OOP Concepts",
       src: "https://www.youtube.com/embed/PFmuCDHHpwk",
-      thumbnail: "/placeholder.svg?height=200&width=320",
+      thumbnail: "/placeholder.svg",
     },
-    {
-      type: "image" as const,
-      title: "Java Class Hierarchy Diagram",
-      src: "/placeholder.svg?height=200&width=320",
-    },
-    {
-      type: "video" as const,
-      title: "Inheritance vs Polymorphism",
-      src: "https://www.youtube.com/embed/0xw06loTm1k",
-      thumbnail: "/placeholder.svg?height=200&width=320",
-    },
-    {
-      type: "image" as const,
-      title: "Method Overriding Example",
-      src: "/placeholder.svg?height=200&width=320",
-    },
+    { type: "image", title: "Class Diagram", src: "/placeholder.svg" },
   ];
 
   const pastPapers = [
     {
       id: 1,
-      title: "BCA 3rd Semester - Object-Oriented Programming",
-      university: "Tribhuvan University",
+      title: "BCA OOP Exam",
+      university: "TU",
       year: "2022",
       semester: "Spring",
       questions: 7,
-      duration: "3 hours",
+      duration: "3h",
       downloads: 1245,
       color: "#3B82F6",
     },
-    {
-      id: 2,
-      title: "BSc.CSIT 4th Semester - Database Management Systems",
-      university: "Tribhuvan University",
-      year: "2022",
-      semester: "Fall",
-      questions: 8,
-      duration: "3 hours",
-      downloads: 987,
-      color: "#10B981",
-    },
-    {
-      id: 3,
-      title: "BIM 3rd Semester - Web Technology",
-      university: "Pokhara University",
-      year: "2022",
-      semester: "Spring",
-      questions: 6,
-      duration: "3 hours",
-      downloads: 756,
-      color: "#F59E0B",
-    },
   ];
 
-  // const container = {
-  //   hidden: { opacity: 0 },
-  //   show: {
-  //     opacity: 1,
-  //     transition: {
-  //       staggerChildren: 0.1,
-  //     },
-  //   },
-  // };
-
-  // const item = {
-  //   hidden: { opacity: 0, y: 20 },
-  //   show: { opacity: 1, y: 0 },
-  // };
-
   const renderMCQContent = (question: QuestionWithExtras) => {
-
-     if (isGenerating)
-       return (
-         <div className="space-y-4">
-           <Skeleton className="h-4 w-full rounded-lg" />
-           <Skeleton className="h-4 w-3/4 rounded-lg" />
-           <div className="space-y-2">
-             {[1, 2, 3, 4].map((i) => (
-               <Skeleton key={i} className="h-12 w-full rounded-lg" />
-             ))}
-           </div>
-         </div>
-       );
+    if (isGenerating)
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-4 w-full rounded-lg" />
+          <Skeleton className="h-4 w-3/4 rounded-lg" />
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
+      );
 
     if (!question.mcqData) return null;
-
     const { id, text, mcqData } = question;
     const { options, correctAnswer, explanation } = mcqData;
     const hasAnswered = showAnswers[id];
     const userAnswer = userSelections[id];
+    
 
     return (
       <div className="space-y-6">
@@ -450,13 +375,16 @@ export default function ExamPrepPage() {
             let bgColor = "bg-background/80";
 
             if (hasAnswered) {
-              if (isCorrect) {
-                borderColor = "border-green-500";
-                bgColor = "bg-green-500/10";
-              } else if (isSelected) {
-                borderColor = "border-red-500";
-                bgColor = "bg-red-500/10";
-              }
+              borderColor = isCorrect
+                ? "border-green-500"
+                : isSelected
+                ? "border-red-500"
+                : borderColor;
+              bgColor = isCorrect
+                ? "bg-green-500/10"
+                : isSelected
+                ? "bg-red-500/10"
+                : bgColor;
             }
 
             return (
@@ -526,17 +454,15 @@ export default function ExamPrepPage() {
   };
 
   const renderShortAnswerContent = (question: QuestionWithExtras) => {
-
-     if (isGenerating)
-       return (
-         <div className="space-y-4">
-           <Skeleton className="h-4 w-full rounded-lg" />
-           <Skeleton className="h-20 w-full rounded-lg" />
-         </div>
-       );
+    if (isGenerating)
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-4 w-full rounded-lg" />
+          <Skeleton className="h-20 w-full rounded-lg" />
+        </div>
+      );
 
     if (!question.shortAnswerData) return null;
-
     const { id, text, shortAnswerData } = question;
     const { sampleAnswer, keywords, explanation } = shortAnswerData;
 
@@ -586,7 +512,6 @@ export default function ExamPrepPage() {
   };
 
   const renderLongAnswerContent = (question: QuestionWithExtras) => {
-
     if (isGenerating)
       return (
         <div className="space-y-4">
@@ -596,7 +521,6 @@ export default function ExamPrepPage() {
       );
 
     if (!question.longAnswerData) return null;
-
     const { id, text, longAnswerData } = question;
     const { sampleAnswer, keyPoints, rubric, explanation } = longAnswerData;
 
@@ -651,189 +575,187 @@ export default function ExamPrepPage() {
     );
   };
 
-  const renderReferenceSection = () => (
-<div>
-      <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-bold">
-            Reference Materials
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MediaSlider items={mediaItems} className="mb-4" />
-          <div className="space-y-4">
-            <div className="p-3 rounded-lg border border-border/10 bg-background/80">
-              <h4 className="font-medium flex items-center gap-2 mb-2">
-                <BookOpen className="h-4 w-4 text-primary" />
-                <span>Key Resources</span>
-              </h4>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <div className="mt-0.5">
-                    <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  </div>
-                  <span>Java Documentation: OOP Concepts</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="mt-0.5">
-                    <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  </div>
-                  <span>Design Patterns in Java</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="mt-0.5">
-                    <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  </div>
-                  <span>SOLID Principles of OOP</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="p-3 rounded-lg border border-border/10 bg-background/80">
-              <h4 className="font-medium flex items-center gap-2 mb-2">
-                <FileText className="h-4 w-4 text-amber-500" />
-                <span>Related Topics</span>
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="bg-muted/50">
-                  Design Patterns
-                </Badge>
-                <Badge variant="outline" className="bg-muted/50">
-                  SOLID Principles
-                </Badge>
-                <Badge variant="outline" className="bg-muted/50">
-                  Interfaces
-                </Badge>
-                <Badge variant="outline" className="bg-muted/50">
-                  Abstract Classes
-                </Badge>
+    const renderReferenceSection = () => (
+      <div>
+        <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold">
+              Reference Materials
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MediaSlider items={mediaItems} className="mb-4" />
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+                <h4 className="font-medium flex items-center gap-2 mb-2">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                  <span>Key Resources</span>
+                </h4>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    </div>
+                    <span>Java Documentation: OOP Concepts</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    </div>
+                    <span>Design Patterns in Java</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    </div>
+                    <span>SOLID Principles of OOP</span>
+                  </li>
+                </ul>
               </div>
-            </div>
 
-            <Button variant="outline" className="w-full rounded-full">
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Ask AI for More Help
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-bold">Exam Tips</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
-              <div className="flex items-start gap-2">
-                <div className="mt-0.5">
-                  <Lightbulb className="h-4 w-4 text-amber-500" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-amber-500">
-                    Writing Tips
-                  </h4>
-                  <ul className="mt-1 space-y-1 text-xs">
-                    <li>Structure your answer with clear headings</li>
-                    <li>Include practical examples with code snippets</li>
-                    <li>Explain how concepts contribute to software quality</li>
-                    <li>Summarize collective benefits of principles</li>
-                  </ul>
+              <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+                <h4 className="font-medium flex items-center gap-2 mb-2">
+                  <FileText className="h-4 w-4 text-amber-500" />
+                  <span>Related Topics</span>
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="bg-muted/50">
+                    Design Patterns
+                  </Badge>
+                  <Badge variant="outline" className="bg-muted/50">
+                    SOLID Principles
+                  </Badge>
+                  <Badge variant="outline" className="bg-muted/50">
+                    Interfaces
+                  </Badge>
+                  <Badge variant="outline" className="bg-muted/50">
+                    Abstract Classes
+                  </Badge>
                 </div>
               </div>
-            </div>
 
-            <div className="p-3 rounded-lg border border-border/10 bg-background/80">
-              <h4 className="font-medium flex items-center gap-2 mb-2">
-                <Clock className="h-4 w-4 text-primary" />
-                <span>Time Management</span>
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                Allocate 18-20 minutes for 10-mark questions, 8-10 minutes for
-                5-mark questions.
-              </p>
+              <Button variant="outline" className="w-full rounded-full">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Ask AI for More Help
+              </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+          </CardContent>
+        </Card>
 
-    const renderProgressSection = () => (
-      <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md mt-6">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-bold">My Progress</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4">
-            <div className="flex-1 p-4 rounded-lg bg-primary/10">
-              <h4 className="font-medium">Completion</h4>
-              <Progress value={completion} className="h-2 mt-2" />
-              <p className="text-sm mt-1">
-                {answeredQuestions.size}/{totalQuestions} questions
-              </p>
-            </div>
-            <div className="flex-1 p-4 rounded-lg bg-green-500/10">
-              <h4 className="font-medium">Accuracy</h4>
-              <div className="text-2xl font-bold mt-2 text-green-500">
-                {accuracy}%
+        <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold">Exam Tips</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5">
+                    <Lightbulb className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-amber-500">
+                      Writing Tips
+                    </h4>
+                    <ul className="mt-1 space-y-1 text-xs">
+                      <li>Structure your answer with clear headings</li>
+                      <li>Include practical examples with code snippets</li>
+                      <li>
+                        Explain how concepts contribute to software quality
+                      </li>
+                      <li>Summarize collective benefits of principles</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+                <h4 className="font-medium flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span>Time Management</span>
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Allocate 18-20 minutes for 10-mark questions, 8-10 minutes for
+                  5-mark questions.
+                </p>
               </div>
             </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="p-4 rounded-lg border border-border/10">
-              <h4 className="font-medium flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                Strengths
-              </h4>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {strengths.map((strength, index) => (
-                  <Badge
-                    key={index}
-                    variant="outline"
-                    className="bg-green-500/10"
-                  >
-                    {strength}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-4 rounded-lg border border-border/10">
-              <h4 className="font-medium flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-                Weaknesses
-              </h4>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {weaknesses.map((weakness, index) => (
-                  <Badge
-                    key={index}
-                    variant="outline"
-                    className="bg-red-500/10"
-                  >
-                    {weakness}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     );
+
+  const renderProgressSection = () => (
+    <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md mt-6">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-bold">My Progress</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-4">
+          <div className="flex-1 p-4 rounded-lg bg-primary/10">
+            <h4 className="font-medium">Completion</h4>
+            <Progress value={completion} className="h-2 mt-2" />
+            <p className="text-sm mt-1">
+              {answeredQuestions.size}/{totalQuestions} questions
+            </p>
+          </div>
+          <div className="flex-1 p-4 rounded-lg bg-green-500/10">
+            <h4 className="font-medium">Accuracy</h4>
+            <div className="text-2xl font-bold mt-2 text-green-500">
+              {accuracy}%
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="p-4 rounded-lg border border-border/10">
+            <h4 className="font-medium flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              Strengths
+            </h4>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {strengths.map((strength, index) => (
+                <Badge
+                  key={index}
+                  variant="outline"
+                  className="bg-green-500/10"
+                >
+                  {strength}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-4 rounded-lg border border-border/10">
+            <h4 className="font-medium flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              Weaknesses
+            </h4>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {weaknesses.map((weakness, index) => (
+                <Badge key={index} variant="outline" className="bg-red-500/10">
+                  {weakness}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="container py-8 space-y-8">
       <div className="relative">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.15),transparent_50%)]"></div>
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.15),transparent_50%)]" />
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
               Exam Preparation
             </h1>
             <p className="text-muted-foreground">
-              Practice with AI-generated questions for Nepali university courses
-              and get instant feedback to improve your exam performance.
+              Practice with AI-generated questions and improve your exam
+              performance.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -852,99 +774,59 @@ export default function ExamPrepPage() {
       </div>
 
       <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-bold">
-            Question Generator Settings
-          </CardTitle>
-        </CardHeader>
         <CardContent>
           <div className="grid gap-6 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="course">Course</Label>
+              <Label>Course</Label>
               <Select value={course} onValueChange={setCourse}>
-                <SelectTrigger id="course" className="rounded-md">
+                <SelectTrigger>
                   <SelectValue placeholder="Select course" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="BCA">BCA</SelectItem>
                   <SelectItem value="BSc.CSIT">BSc.CSIT</SelectItem>
-                  <SelectItem value="BIM">BIM</SelectItem>
-                  <SelectItem value="BIT">BIT</SelectItem>
-                  <SelectItem value="BE Computer">BE Computer</SelectItem>
-                  <SelectItem value="MCA">MCA</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="university">University</Label>
+              <Label>University</Label>
               <Select value={university} onValueChange={setUniversity}>
-                <SelectTrigger id="university" className="rounded-md">
+                <SelectTrigger>
                   <SelectValue placeholder="Select university" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Tribhuvan University">
-                    Tribhuvan University (TU)
-                  </SelectItem>
-                  <SelectItem value="Pokhara University">
-                    Pokhara University (PU)
-                  </SelectItem>
-                  <SelectItem value="Kathmandu University">
-                    Kathmandu University (KU)
-                  </SelectItem>
-                  <SelectItem value="Purbanchal University">
-                    Purbanchal University
-                  </SelectItem>
-                  <SelectItem value="Mid-Western University">
-                    Mid-Western University
-                  </SelectItem>
-                  <SelectItem value="Far-Western University">
-                    Far-Western University
-                  </SelectItem>
+                  <SelectItem value="Tribhuvan University">TU</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
+              <Label>Subject</Label>
               <Select value={subject} onValueChange={setSubject}>
-                <SelectTrigger id="subject" className="rounded-md">
+                <SelectTrigger>
                   <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Object-Oriented Programming">
                     OOP in Java
                   </SelectItem>
-                  <SelectItem value="Data Structures">
-                    Data Structures
+                  <SelectItem value="Data Structure & Algorithm">
+                    Data Structure & Algorithm
                   </SelectItem>
-                  <SelectItem value="Database Systems">
-                    Database Systems
+                  <SelectItem value="System Analysis & Design">
+                    System Analysis & Design
                   </SelectItem>
-                  <SelectItem value="Computer Networks">
-                    Computer Networks
-                  </SelectItem>
-                  <SelectItem value="Web Technology">Web Technology</SelectItem>
-                  <SelectItem value="Operating Systems">
-                    Operating Systems
-                  </SelectItem>
-                  <SelectItem value="Software Engineering">
-                    Software Engineering
-                  </SelectItem>
-                  <SelectItem value="Artificial Intelligence">
-                    Artificial Intelligence
+                  <SelectItem value="Probability & Statistics">
+                    Probability & Statistics
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="search">Search Questions</Label>
+              <Label>Search Questions</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="search"
-                  placeholder="Search by keyword or topic..."
+                  placeholder="Search..."
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -955,165 +837,46 @@ export default function ExamPrepPage() {
 
           <div className="grid gap-6 md:grid-cols-3 mt-6">
             <div className="space-y-2">
-              <Label htmlFor="difficulty">Difficulty Level</Label>
+              <Label>Difficulty</Label>
               <Select
                 value={difficulty}
                 onValueChange={(value) => setDifficulty(value as Difficulty)}
               >
-                <SelectTrigger id="difficulty" className="rounded-md">
+                <SelectTrigger>
                   <SelectValue placeholder="Select difficulty" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="EASY">Easy</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="HARD">Hard</SelectItem>
-                  <SelectItem value="MIXED">Mixed</SelectItem>
+                  {["EASY", "MEDIUM", "HARD", "MIXED"].map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {level.charAt(0) + level.slice(1).toLowerCase()}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="num-questions">
-                Number of Questions ({numQuestions})
-              </Label>
+              <Label>Questions: {numQuestions}</Label>
               <Slider
-                id="num-questions"
                 min={5}
                 max={50}
                 step={5}
                 value={[numQuestions]}
-                onValueChange={(value) => setNumQuestions(value[0])}
-                className="py-2"
+                onValueChange={(val) => setNumQuestions(val[0])}
               />
             </div>
-
             <div className="flex items-end">
               <Button
                 className="w-full rounded-full"
                 onClick={handleGenerateQuestions}
                 disabled={isGenerating}
               >
-                <Zap className="mr-2 h-4 w-4" />
+                <Zap className="mr-2 h-4 w-4" />{" "}
                 {isGenerating ? "Generating..." : "Generate Questions"}
               </Button>
             </div>
           </div>
-
-          {/* <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <QuestionFilter onFilterChange={handleFilterChange} />
-            <div className="flex items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="past-questions"
-                  checked={showPastQuestions}
-                  onCheckedChange={setShowPastQuestions}
-                />
-                <Label htmlFor="past-questions">Show Past Questions</Label>
-              </div>
-              <Button
-                variant="outline"
-                className="rounded-full"
-                onClick={() => setShowPastQuestions(!showPastQuestions)}
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                Past Papers
-              </Button>
-            </div>
-          </div> */}
         </CardContent>
       </Card>
-{/* 
-      {showPastQuestions && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="space-y-6"
-        >
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Recent Exam Papers</h2>
-            <Link href="/past-questions">
-              <Button variant="outline" className="rounded-full">
-                View All Papers
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-
-          <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="grid gap-6 md:grid-cols-3"
-          >
-            {pastPapers.map((paper) => (
-              <motion.div key={paper.id} variants={item}>
-                <motion.div
-                  whileHover={{ y: -5, scale: 1.01 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Card className="h-full overflow-hidden border-border/10 bg-background/50 backdrop-blur-md shadow-md hover:shadow-lg transition-all duration-300">
-                    <CardContent className="p-6 flex flex-col h-full">
-                      <div className="flex justify-between items-start mb-4">
-                        <div
-                          className="size-12 rounded-full"
-                          style={{ backgroundColor: `${paper.color}20` }}
-                        >
-                          <div
-                            className="w-full h-full flex items-center justify-center text-lg font-bold"
-                            style={{ color: paper.color }}
-                          >
-                            {paper.title.charAt(0)}
-                          </div>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="bg-primary/10 text-primary border-primary/20"
-                        >
-                          {paper.year} {paper.semester}
-                        </Badge>
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">{paper.title}</h3>
-                      <p className="text-muted-foreground mb-4 flex-grow">
-                        {paper.university}
-                      </p>
-                      <div className="space-y-2 mt-auto">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Questions:
-                          </span>
-                          <span className="font-medium">{paper.questions}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Duration:
-                          </span>
-                          <span className="font-medium">{paper.duration}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Downloads:
-                          </span>
-                          <span className="font-medium">{paper.downloads}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="p-6 pt-0 flex gap-2">
-                      <Button variant="outline" className="flex-1 rounded-full">
-                        Preview
-                      </Button>
-                      <Button className="flex-1 rounded-full">
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </motion.div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-      )} */}
 
       {generatedQuestions.length > 0 && (
         <Tabs
@@ -1139,71 +902,52 @@ export default function ExamPrepPage() {
           </div>
 
           <TabsContent value="MCQ">
-            <div className="grid gap-6 md:grid-cols-3">
-              <div className="md:col-span-2 space-y-6">
-                <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-xl font-bold">
-                        Multiple Choice Question
-                      </CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className="bg-primary/10 text-primary border-primary/20"
-                        >
-                          Question {currentQuestionIndex + 1}/
-                          {filteredQuestions.length}
-                        </Badge>
-                        <Badge variant="outline">
-                          {currentQuestionData?.difficulty}
-                        </Badge>
+            <div className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-3">
+                <div className="md:col-span-2 space-y-6">
+                  <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-xl font-bold">
+                          Multiple Choice Question
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          {renderQuestionCounter()}
+                          <Badge variant="outline">
+                            {currentQuestionData?.difficulty}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {currentQuestionData &&
-                      renderMCQContent(currentQuestionData)}
-                    <div className="flex gap-2 mt-6">
-                      <Button
-                        variant="outline"
-                        className="flex-1 rounded-full"
-                        onClick={handlePreviousQuestion}
-                        disabled={currentQuestionIndex === 0}
-                      >
-                        Previous Question
-                      </Button>
-                      <Button
-                        className="flex-1 rounded-full"
-                        onClick={handleNextQuestion}
-                        disabled={
-                          currentQuestionIndex === filteredQuestions.length - 1
-                        }
-                      >
-                        Next Question
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                {/* <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="rounded-full">
-                    <ThumbsUp className="mr-2 h-4 w-4" />
-                    Helpful
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-full">
-                    <ThumbsDown className="mr-2 h-4 w-4" />
-                    Not Helpful
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full ml-auto"
-                  >
-                    Report Issue
-                  </Button>
-                </div> */}
+                    </CardHeader>
+                    <CardContent>
+                      {currentQuestionData &&
+                        renderMCQContent(currentQuestionData)}
+                      <div className="flex gap-2 mt-6">
+                        <Button
+                          variant="outline"
+                          className="flex-1 rounded-full"
+                          onClick={handlePreviousQuestion}
+                          disabled={currentQuestionIndex === 0}
+                        >
+                          Previous Question
+                        </Button>
+                        <Button
+                          className="flex-1 rounded-full"
+                          onClick={handleNextQuestion}
+                          disabled={
+                            currentQuestionIndex ===
+                            filteredQuestions.length - 1
+                          }
+                        >
+                          Next Question
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div>{renderReferenceSection()}</div>
               </div>
-              {renderReferenceSection()}
+              <div className="md:col-span-3">{renderProgressSection()}</div>
             </div>
           </TabsContent>
 
@@ -1217,13 +961,7 @@ export default function ExamPrepPage() {
                         Short Answer Question
                       </CardTitle>
                       <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className="bg-primary/10 text-primary border-primary/20"
-                        >
-                          Question {currentQuestionIndex + 1}/
-                          {filteredQuestions.length}
-                        </Badge>
+                        {renderQuestionCounter()}
                         <Badge variant="outline">
                           {currentQuestionData?.difficulty}
                         </Badge>
@@ -1255,25 +993,8 @@ export default function ExamPrepPage() {
                     </div>
                   </CardContent>
                 </Card>
-                {/* <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="rounded-full">
-                    <ThumbsUp className="mr-2 h-4 w-4" />
-                    Helpful
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-full">
-                    <ThumbsDown className="mr-2 h-4 w-4" />
-                    Not Helpful
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full ml-auto"
-                  >
-                    Report Issue
-                  </Button>
-                </div> */}
               </div>
-              {renderReferenceSection()}
+              <div>{renderReferenceSection()}</div>
             </div>
           </TabsContent>
 
@@ -1287,13 +1008,7 @@ export default function ExamPrepPage() {
                         Long Answer Question
                       </CardTitle>
                       <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className="bg-primary/10 text-primary border-primary/20"
-                        >
-                          Question {currentQuestionIndex + 1}/
-                          {filteredQuestions.length}
-                        </Badge>
+                        {renderQuestionCounter()}
                         <Badge variant="outline">
                           {currentQuestionData?.difficulty}
                         </Badge>
@@ -1325,25 +1040,8 @@ export default function ExamPrepPage() {
                     </div>
                   </CardContent>
                 </Card>
-                {/* <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="rounded-full">
-                    <ThumbsUp className="mr-2 h-4 w-4" />
-                    Helpful
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-full">
-                    <ThumbsDown className="mr-2 h-4 w-4" />
-                    Not Helpful
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full ml-auto"
-                  >
-                    Report Issue
-                  </Button>
-                </div> */}
               </div>
-              {renderReferenceSection()}
+              <div>{renderReferenceSection()}</div>
             </div>
           </TabsContent>
         </Tabs>
@@ -1356,7 +1054,6 @@ export default function ExamPrepPage() {
           onClose={() => setShowAIAssistant(false)}
         />
       )}
-{renderProgressSection()}
     </div>
   );
 }
