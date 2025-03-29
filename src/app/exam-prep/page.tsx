@@ -944,57 +944,61 @@ export default function ExamPrepPage() {
                       </div>
                     </CardContent>
                   </Card>
+                  {renderProgressSection()}
                 </div>
                 <div>{renderReferenceSection()}</div>
               </div>
-              <div className="md:col-span-3">{renderProgressSection()}</div>
             </div>
           </TabsContent>
 
           <TabsContent value="SHORT_ANSWER">
-            <div className="grid gap-6 md:grid-cols-3">
-              <div className="md:col-span-2 space-y-6">
-                <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-xl font-bold">
-                        Short Answer Question
-                      </CardTitle>
-                      <div className="flex items-center gap-2">
-                        {renderQuestionCounter()}
-                        <Badge variant="outline">
-                          {currentQuestionData?.difficulty}
-                        </Badge>
-                        <Badge variant="outline">5 Marks</Badge>
+            <div className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-3">
+                <div className="md:col-span-2 space-y-6">
+                  <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-xl font-bold">
+                          Short Answer Question
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          {renderQuestionCounter()}
+                          <Badge variant="outline">
+                            {currentQuestionData?.difficulty}
+                          </Badge>
+                          <Badge variant="outline">5 Marks</Badge>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {currentQuestionData &&
-                      renderShortAnswerContent(currentQuestionData)}
-                    <div className="flex gap-2 mt-6">
-                      <Button
-                        variant="outline"
-                        className="flex-1 rounded-full"
-                        onClick={handlePreviousQuestion}
-                        disabled={currentQuestionIndex === 0}
-                      >
-                        Previous Question
-                      </Button>
-                      <Button
-                        className="flex-1 rounded-full"
-                        onClick={handleNextQuestion}
-                        disabled={
-                          currentQuestionIndex === filteredQuestions.length - 1
-                        }
-                      >
-                        Next Question
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent>
+                      {currentQuestionData &&
+                        renderShortAnswerContent(currentQuestionData)}
+                      <div className="flex gap-2 mt-6">
+                        <Button
+                          variant="outline"
+                          className="flex-1 rounded-full"
+                          onClick={handlePreviousQuestion}
+                          disabled={currentQuestionIndex === 0}
+                        >
+                          Previous Question
+                        </Button>
+                        <Button
+                          className="flex-1 rounded-full"
+                          onClick={handleNextQuestion}
+                          disabled={
+                            currentQuestionIndex ===
+                            filteredQuestions.length - 1
+                          }
+                        >
+                          Next Question
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {renderProgressSection()}
+                </div>
+                <div>{renderReferenceSection()}</div>
               </div>
-              <div>{renderReferenceSection()}</div>
             </div>
           </TabsContent>
 
@@ -1040,6 +1044,7 @@ export default function ExamPrepPage() {
                     </div>
                   </CardContent>
                 </Card>
+                {renderProgressSection()}
               </div>
               <div>{renderReferenceSection()}</div>
             </div>
