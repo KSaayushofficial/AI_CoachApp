@@ -60,6 +60,7 @@ import {
 import Link from "next/link";
 import { generateAIQuestions } from "@/app/actions/generateQuestions";
 import { Question, QuestionType, Difficulty } from "@prisma/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type QuestionWithExtras = Question & {
   mcqData?: {
@@ -79,6 +80,85 @@ type QuestionWithExtras = Question & {
     explanation: string;
   } | null;
 };
+
+const DUMMY_QUESTIONS: QuestionWithExtras[] = [
+  {
+    id: "1",
+    type: "MCQ",
+    text: "What is the primary purpose of inheritance in OOP?",
+    difficulty: "MEDIUM",
+    subjectId: "dummy",
+    topic: "Object-Oriented Programming",
+    tags: ["OOP", "Inheritance"],
+    explanation: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    mcqData: {
+      options: [
+        "Code Reusability",
+        "Memory Management",
+        "Data Hiding",
+        "Network Communication",
+      ],
+      correctAnswer: "Code Reusability",
+      explanation:
+        "Inheritance allows classes to inherit properties and methods from parent classes.",
+    },
+  },
+  {
+    id: "2",
+    type: "SHORT_ANSWER",
+    text: "Explain polymorphism with an example.",
+    difficulty: "MEDIUM",
+    subjectId: "dummy",
+    topic: "Object-Oriented Programming",
+    tags: ["OOP", "Polymorphism"],
+    explanation: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    shortAnswerData: {
+      sampleAnswer:
+        "Polymorphism allows methods to perform different tasks based on the object. Example: Animal sound() method with different implementations.",
+      keywords: ["Polymorphism", "Method Overriding", "Runtime"],
+      explanation:
+        "Polymorphism enables one interface to be used for multiple forms.",
+    },
+  },
+  {
+    id: "3",
+    type: "LONG_ANSWER",
+    text: "Describe SOLID principles in object-oriented design.",
+    difficulty: "HARD",
+    subjectId: "dummy",
+    topic: "Software Design Principles",
+    tags: ["SOLID", "Design Principles"],
+    explanation: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    longAnswerData: {
+      sampleAnswer:
+        "SOLID principles are: Single Responsibility, Open-Closed, Liskov Substitution...",
+      keyPoints: [
+        "Single Responsibility Principle",
+        "Open/Closed Principle",
+        "Liskov Substitution",
+        "Interface Segregation",
+        "Dependency Inversion",
+      ],
+      rubric: {
+        comprehension: "Understanding of each principle",
+        analysis: "Real-world application examples",
+        integration: "Connection between principles",
+        presentation: "Clear structure and examples",
+      },
+      explanation: "SOLID principles guide maintainable software design.",
+    },
+  },
+];
+
+function handleShowExplanation(question: string, explanation: string) {
+  alert(`Question: ${question}\nExplanation: ${explanation}`);
+}
 
 export default function ExamPrepPage() {
   const { toast } = useToast();
@@ -109,6 +189,45 @@ export default function ExamPrepPage() {
     {}
   );
   const [showAnswers, setShowAnswers] = useState<Record<string, boolean>>({});
+    const [correctAnswers, setCorrectAnswers] = useState(0);
+    const [incorrectAnswers, setIncorrectAnswers] = useState(0);
+    const [answeredQuestions, setAnsweredQuestions] = useState<Set<string>>(
+      new Set()
+    );
+    const [strengths, setStrengths] = useState<string[]>([]);
+    const [weaknesses, setWeaknesses] = useState<string[]>([]);
+
+     const totalQuestions = generatedQuestions.length;
+     const completion = (answeredQuestions.size / totalQuestions) * 100;
+     const accuracy =
+       answeredQuestions.size > 0
+         ? Math.round((correctAnswers / answeredQuestions.size) * 100)
+         : 0;
+
+           const handleCheckAnswer = (
+             questionId: string,
+             isCorrect: boolean
+           ) => {
+             setShowAnswers((prev) => ({ ...prev, [questionId]: true }));
+             setAnsweredQuestions((prev) => new Set(prev.add(questionId)));
+
+             if (isCorrect) {
+               setCorrectAnswers((prev) => prev + 1);
+               setStrengths((prev) => [...new Set([...prev, subject])]);
+             } else {
+               setIncorrectAnswers((prev) => prev + 1);
+               setWeaknesses((prev) => [...new Set([...prev, subject])]);
+             }
+           };
+
+           const renderQuestionCounter = () => (
+             <Badge
+               variant="outline"
+               className="bg-primary/10 text-primary border-primary/20"
+             >
+               Question {currentQuestionIndex + 1} of {filteredQuestions.length}
+             </Badge>
+           );
 
   const handleFilterChange = (filters: {
     difficulty: string;
@@ -120,11 +239,6 @@ export default function ExamPrepPage() {
       title: "Filters applied",
       description: "Questions have been filtered based on your criteria.",
     });
-  };
-
-  const handleShowExplanation = (question: string, answer: string) => {
-    setCurrentQuestion({ question, answer });
-    setShowAIAssistant(true);
   };
 
   const handleGenerateQuestions = async () => {
@@ -141,6 +255,9 @@ export default function ExamPrepPage() {
     setIsGenerating(true);
     setUserSelections({});
     setShowAnswers({});
+    setCorrectAnswers(0);
+     setIncorrectAnswers(0);
+     setAnsweredQuestions(new Set());
 
     try {
       const questions = await generateAIQuestions({
@@ -276,22 +393,36 @@ export default function ExamPrepPage() {
     },
   ];
 
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
+  // const container = {
+  //   hidden: { opacity: 0 },
+  //   show: {
+  //     opacity: 1,
+  //     transition: {
+  //       staggerChildren: 0.1,
+  //     },
+  //   },
+  // };
 
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
-  };
+  // const item = {
+  //   hidden: { opacity: 0, y: 20 },
+  //   show: { opacity: 1, y: 0 },
+  // };
 
   const renderMCQContent = (question: QuestionWithExtras) => {
+
+     if (isGenerating)
+       return (
+         <div className="space-y-4">
+           <Skeleton className="h-4 w-full rounded-lg" />
+           <Skeleton className="h-4 w-3/4 rounded-lg" />
+           <div className="space-y-2">
+             {[1, 2, 3, 4].map((i) => (
+               <Skeleton key={i} className="h-12 w-full rounded-lg" />
+             ))}
+           </div>
+         </div>
+       );
+
     if (!question.mcqData) return null;
 
     const { id, text, mcqData } = question;
@@ -385,7 +516,7 @@ export default function ExamPrepPage() {
         {!hasAnswered && userAnswer && (
           <Button
             className="w-full"
-            onClick={() => setShowAnswers((prev) => ({ ...prev, [id]: true }))}
+            onClick={() => handleCheckAnswer(id, userAnswer === correctAnswer)}
           >
             Check Answer
           </Button>
@@ -395,6 +526,15 @@ export default function ExamPrepPage() {
   };
 
   const renderShortAnswerContent = (question: QuestionWithExtras) => {
+
+     if (isGenerating)
+       return (
+         <div className="space-y-4">
+           <Skeleton className="h-4 w-full rounded-lg" />
+           <Skeleton className="h-20 w-full rounded-lg" />
+         </div>
+       );
+
     if (!question.shortAnswerData) return null;
 
     const { id, text, shortAnswerData } = question;
@@ -446,6 +586,15 @@ export default function ExamPrepPage() {
   };
 
   const renderLongAnswerContent = (question: QuestionWithExtras) => {
+
+    if (isGenerating)
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-4 w-full rounded-lg" />
+          <Skeleton className="h-32 w-full rounded-lg" />
+        </div>
+      );
+
     if (!question.longAnswerData) return null;
 
     const { id, text, longAnswerData } = question;
@@ -609,6 +758,69 @@ export default function ExamPrepPage() {
       </Card>
     </div>
   );
+
+    const renderProgressSection = () => (
+      <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md mt-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-bold">My Progress</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-4">
+            <div className="flex-1 p-4 rounded-lg bg-primary/10">
+              <h4 className="font-medium">Completion</h4>
+              <Progress value={completion} className="h-2 mt-2" />
+              <p className="text-sm mt-1">
+                {answeredQuestions.size}/{totalQuestions} questions
+              </p>
+            </div>
+            <div className="flex-1 p-4 rounded-lg bg-green-500/10">
+              <h4 className="font-medium">Accuracy</h4>
+              <div className="text-2xl font-bold mt-2 text-green-500">
+                {accuracy}%
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="p-4 rounded-lg border border-border/10">
+              <h4 className="font-medium flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                Strengths
+              </h4>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {strengths.map((strength, index) => (
+                  <Badge
+                    key={index}
+                    variant="outline"
+                    className="bg-green-500/10"
+                  >
+                    {strength}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg border border-border/10">
+              <h4 className="font-medium flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                Weaknesses
+              </h4>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {weaknesses.map((weakness, index) => (
+                  <Badge
+                    key={index}
+                    variant="outline"
+                    className="bg-red-500/10"
+                  >
+                    {weakness}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
 
   return (
     <div className="container py-8 space-y-8">
@@ -787,7 +999,7 @@ export default function ExamPrepPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          {/* <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <QuestionFilter onFilterChange={handleFilterChange} />
             <div className="flex items-center gap-4">
               <div className="flex items-center space-x-2">
@@ -807,10 +1019,10 @@ export default function ExamPrepPage() {
                 Past Papers
               </Button>
             </div>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
-
+{/* 
       {showPastQuestions && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
@@ -901,7 +1113,7 @@ export default function ExamPrepPage() {
             ))}
           </motion.div>
         </motion.div>
-      )}
+      )} */}
 
       {generatedQuestions.length > 0 && (
         <Tabs
@@ -973,7 +1185,7 @@ export default function ExamPrepPage() {
                     </div>
                   </CardContent>
                 </Card>
-                <div className="flex gap-2">
+                {/* <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="rounded-full">
                     <ThumbsUp className="mr-2 h-4 w-4" />
                     Helpful
@@ -989,7 +1201,7 @@ export default function ExamPrepPage() {
                   >
                     Report Issue
                   </Button>
-                </div>
+                </div> */}
               </div>
               {renderReferenceSection()}
             </div>
@@ -1043,7 +1255,7 @@ export default function ExamPrepPage() {
                     </div>
                   </CardContent>
                 </Card>
-                <div className="flex gap-2">
+                {/* <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="rounded-full">
                     <ThumbsUp className="mr-2 h-4 w-4" />
                     Helpful
@@ -1059,7 +1271,7 @@ export default function ExamPrepPage() {
                   >
                     Report Issue
                   </Button>
-                </div>
+                </div> */}
               </div>
               {renderReferenceSection()}
             </div>
@@ -1113,7 +1325,7 @@ export default function ExamPrepPage() {
                     </div>
                   </CardContent>
                 </Card>
-                <div className="flex gap-2">
+                {/* <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="rounded-full">
                     <ThumbsUp className="mr-2 h-4 w-4" />
                     Helpful
@@ -1129,7 +1341,7 @@ export default function ExamPrepPage() {
                   >
                     Report Issue
                   </Button>
-                </div>
+                </div> */}
               </div>
               {renderReferenceSection()}
             </div>
@@ -1144,6 +1356,7 @@ export default function ExamPrepPage() {
           onClose={() => setShowAIAssistant(false)}
         />
       )}
+{renderProgressSection()}
     </div>
   );
 }
