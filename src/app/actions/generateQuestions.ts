@@ -26,46 +26,50 @@ const PROMPTS = {
     difficulty: string,
     numQuestions: number
   ) => `
-    Generate a set of ${numQuestions} unique and **non-repetitive** questions 
-    for ${selectedCourse} students covering the subtopic **"${subtopic}"** 
-    within **${selectedSubject}** at a **${difficulty}** level.
+    Generate a diverse set of ${numQuestions} **unique and non-repetitive** questions 
+    for ${selectedCourse} students on **"${subtopic}"** within **${selectedSubject}** at a **${difficulty}** level.
 
-    Each question must explore a **different aspect** of "${subtopic}" and should not be simple rewordings of the same idea.
-    **Ensure variety** by addressing different angles, use cases, or theoretical and practical perspectives.
+    ### **Diversity Requirements:**
+    Each question must focus on a **distinct aspect** of "${subtopic}". Ensure **conceptual depth** by covering:
+    - **Fundamentals** (definitions, key principles)
+    - **Practical Applications** (real-world use, industry relevance)
+    - **Challenges & Solutions** (limitations, security, optimization)
+    - **Comparative Analysis** (contrasting approaches, trade-offs)
+    - **Problem-Solving Scenarios** (case-based or code-based, if applicable)
 
-    Generate exactly ONE set of questions with THREE types:
+    Generate exactly ONE set of questions in the following format:
     
-    1. **Multiple Choice Question (MCQ)** - A well-structured question with plausible answer choices.
-    2. **Short Answer Question** - A focused question requiring concise explanation or analysis.
-    3. **Long Answer Question** - A deep, analytical question demanding a detailed response.
+    1. **Multiple Choice Question (MCQ)** - A well-structured conceptual question with distinct answer choices.
+    2. **Short Answer Question** - A concise yet analytical question covering a specific concept or challenge.
+    3. **Long Answer Question** - A deep, **multi-perspective** question requiring a detailed response.
 
     ### **Rules for Generation:**
-    - **Ensure conceptual depth**: Cover **different** aspects of "${subtopic}".
-    - **Avoid repetition**: Do not generate variations of the same question.
-    - **Include real-world relevance**: If applicable, tie questions to industry applications.
-    - **Use examples where necessary**: For programming topics, include a code snippet **only if necessary**.
+    - **Ensure diversity**: Cover **different** aspects of "${subtopic}".
+    - **Avoid rewording**: No repetitive or rephrased versions of the same question.
+    - **Include real-world relevance**: Industry applications, security concerns, best practices.
+    - **Use examples where necessary**: Code snippets **only if they add clarity**.
 
     ### **Strict JSON Output Format:**
     {
       "mcq": {
-        "question": "A unique and precise MCQ about '${subtopic}'",
+        "question": "A precise MCQ covering a unique aspect of '${subtopic}'",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": "Correct option text",
-        "definition": "Provide a clear definition of the subtopic",
-        "explanation": "Explain the reasoning behind the correct answer"
+        "definition": "A clear explanation of the subtopic",
+        "explanation": "Rationale behind the correct answer"
       },
       "shortAnswer": {
-        "question": "A unique and well-structured short-answer question about '${subtopic}'",
-        "definition": "Provide a concise definition of the subtopic",
+        "question": "A well-structured short-answer question about '${subtopic}'",
+        "definition": "Concise definition of the subtopic",
         "sampleAnswer": "3-5 sentence response analyzing the concept",
         "keywords": ["Key Concept 1", "Key Concept 2", "Key Concept 3"],
         "explanation": "Brief rationale behind the question",
-        "codeExample": "Include a code snippet only if relevant"
+        "codeExample": "Include only if relevant"
       },
       "longAnswer": {
         "question": "A deep and analytical long-answer question about '${subtopic}'",
-        "definition": "Provide a clear definition of the subtopic",
-        "sampleAnswer": "A structured in-depth response analyzing multiple perspectives",
+        "definition": "Clear definition of the subtopic",
+        "sampleAnswer": "A structured response analyzing multiple perspectives",
         "keyPoints": [
           "Critical analytical point 1", 
           "Critical analytical point 2", 
@@ -79,11 +83,12 @@ const PROMPTS = {
           "presentation": "Criteria for academic writing"
         },
         "explanation": "Detailed context for why this question is relevant",
-        "codeExample": "Include a code snippet only if relevant"
+        "codeExample": "Include only if relevant"
       }
     }
   `,
 };
+
 
 
 function validateQuestionSet(questionSet: any): boolean {
