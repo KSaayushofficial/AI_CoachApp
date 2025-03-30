@@ -24,7 +24,7 @@ const PROMPTS = {
     difficulty: string,
     numQuestions: number
   ) => `
-    Generate unique comprehensive question set for ${selectedCourse} students at ${university} 
+    Generate unique comprehensive question set for ${selectedCourse} students   
     covering ${selectedSubject} with ${difficulty} complexity.
 
     Generate exactly ONE set of questions with THREE types:
@@ -33,24 +33,29 @@ const PROMPTS = {
     3. Long Answer Question
 
     IMPORTANT: Ensure questions are related and cover the same core academic concept.
+    Only include code examples if the question is programming-related.
 
     Respond STRICTLY in this JSON format:
     {
       "mcq": {
-        "question": "Precise MCQ text",
+        "question": "Precise unique and well structured MCQ text",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": "Correct option text",
+        "definition" : "Give a clear and concise definition of the concept",
         "explanation": "Comprehensive explanation"
       },
       "shortAnswer": {
-        "question": "Focused short-answer question",
-        "sampleAnswer": "Concise 3-5 sentence analytical response",
+        "question": "Precise unique and well structured Focused short-answer question",
+        "definition" : "Give a clear and concise definition of the concept",
+        "sampleAnswer": "Concise 3-5 sentence analytical response. Include code if necessary.",
         "keywords": ["Key Concept 1", "Key Concept 2", "Key Concept 3"],
-        "explanation": "Brief rationale"
+        "explanation": "Brief rationale",
+        "codeExample": "Include a code snippet only if the question requires it."
       },
       "longAnswer": {
-        "question": "Comprehensive long-form analytical question",
-        "sampleAnswer": "Structured in-depth response",
+        "question": "Precise unique and well structured Comprehensive long-form analytical question",
+        "definition" : "Give a clear and concise definition of the concept",
+        "sampleAnswer": "Structured in-depth response. Include code if necessary.",
         "keyPoints": [
           "Critical analytical point 1", 
           "Critical analytical point 2", 
@@ -63,11 +68,13 @@ const PROMPTS = {
           "integration": "Concept connection criteria",
           "presentation": "Academic writing assessment"
         },
-        "explanation": "Detailed question context"
+        "explanation": "Detailed question context",
+        "codeExample": "Include a code snippet only if the question requires it."
       }
     }
   `,
 };
+
 
 function validateQuestionSet(questionSet: any): boolean {
   try {

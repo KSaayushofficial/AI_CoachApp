@@ -273,31 +273,37 @@ export default function ExamPrepPage() {
       });
 
       setGeneratedQuestions(
-        questions.map((question) => ({
-          ...question,
-          mcqData: question.mcqData
-            ? {
-                ...question.mcqData,
-                options: Array.isArray(question.mcqData.options)
-                  ? question.mcqData.options.filter(
-                      (option): option is string => typeof option === "string"
-                    )
-                  : [],
-              }
-            : null,
-          longAnswerData: question.longAnswerData
-            ? {
-                ...question.longAnswerData,
-                rubric:
-                  typeof question.longAnswerData.rubric === "object" &&
-                  question.longAnswerData.rubric !== null
-                    ? (question.longAnswerData.rubric as Record<string, string>)
-                    : {},
-                explanation: question.longAnswerData.explanation ?? "",
-              }
-            : null,
-        }))
-      );
+          questions.map((question) => ({
+            ...question,
+            mcqData: question.mcqData
+              ? {
+                  ...question.mcqData,
+                  options: Array.isArray(question.mcqData.options)
+                    ? question.mcqData.options.filter(
+                        (option): option is string => typeof option === "string"
+                      )
+                    : [],
+                }
+              : null,
+            shortAnswerData: question.shortAnswerData
+              ? {
+                  ...question.shortAnswerData,
+    
+                }
+              : null,
+            longAnswerData: question.longAnswerData
+              ? {
+                  ...question.longAnswerData,
+                  rubric:
+                    typeof question.longAnswerData.rubric === "object" &&
+                    question.longAnswerData.rubric !== null
+                      ? (question.longAnswerData.rubric as Record<string, string>)
+                      : {},
+                  explanation: question.longAnswerData.explanation ?? "",
+                }
+              : null,
+          }))
+        );
       setCurrentQuestionIndex(0);
       toast({
         title: "Questions generated",
@@ -559,9 +565,9 @@ export default function ExamPrepPage() {
           <div className="flex items-start gap-2">
             <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
             <div>
-              <h4 className="font-medium text-green-500">Model Answer</h4>
+              <h1 className="font-medium text-green-500">Answer</h1>
               <p className="text-sm mt-1">{sampleAnswer}</p>
-              <h5 className="font-medium mt-3">Key Points</h5>
+              <h3 className="font-medium mt-3">Key Points</h3>
               <ul className="list-disc pl-5 text-sm mt-1 space-y-1">
                 {keyPoints.map((point, index) => (
                   <li key={index}>{point}</li>
