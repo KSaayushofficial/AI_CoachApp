@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { QuestionType, Difficulty } from "@prisma/client";
+import { University } from "lucide-react";
 
 const QuestionGenerationParamsSchema = z.object({
   course: z.string().min(1, "Course is required"),
@@ -18,14 +19,14 @@ const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 
 const PROMPTS = {
   UNIFIED: (
-    course: string,
     university: string,
-    subject: string,
+    selectedCourse: string,
+    selectedSubject: string,
     difficulty: string,
     numQuestions: number
   ) => `
-    Generate unique comprehensive question set for ${course} students at ${university} 
-    covering ${subject} with ${difficulty} complexity.
+    Generate unique comprehensive question set for ${selectedCourse} students at ${university} 
+    covering ${selectedSubject} with ${difficulty} complexity.
 
     Generate exactly ONE set of questions with THREE types:
     1. Multiple Choice Question (MCQ)

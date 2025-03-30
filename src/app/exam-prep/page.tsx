@@ -153,7 +153,7 @@ const DUMMY_QUESTIONS: QuestionWithExtras[] = [
 const courses = [
   {
     id: "BCA",
-    name: "Bachelor of Computer Applications (BCA)",
+    name: "BCA",
     subjects: [
       "Data Structures",
       "Database Management",
@@ -163,7 +163,7 @@ const courses = [
   },
   {
     id: "BScCSIT",
-    name: "Bachelor of Science in Computer Science & IT (BSc CSIT)",
+    name: "BSc CSIT",
     subjects: [
       "Operating Systems",
       "Artificial Intelligence",
@@ -800,8 +800,8 @@ export default function ExamPrepPage() {
 
       <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-3">
-            {/* <div className="space-y-2">
+          <div className="grid gap-6 md:grid-cols-4">
+            <div className="space-y-2">
               <Label>University</Label>
               <Select value={university} onValueChange={setUniversity}>
                 <SelectTrigger>
@@ -811,7 +811,7 @@ export default function ExamPrepPage() {
                   <SelectItem value="Tribhuvan University">TU</SelectItem>
                 </SelectContent>
               </Select>
-            </div> */}
+            </div>
             <div className="space-y-2">
               <Label>Course</Label>
               <Select
@@ -832,14 +832,15 @@ export default function ExamPrepPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 ml-[50px]">
               <Label>Subject</Label>
               <Select
+              value={selectedSubject}
                 disabled={!selectedCourse}
                 onValueChange={setSelectedSubject}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={"Select Subject"} />
+                  <SelectValue placeholder={selectedCourse ? selectedSubject ? selectedSubject :"Select Subject":"Select Course First"} />
                 </SelectTrigger>
                 <SelectContent>
                   {selectedCourseData?.subjects.map((subject: string) => (
@@ -850,9 +851,9 @@ export default function ExamPrepPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 ml-[80px]">
               <Label>Search Questions</Label>
-              <div className="relative">
+              <div className="relative w-50">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search..."
