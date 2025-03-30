@@ -4,7 +4,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { QuestionType, Difficulty } from "@prisma/client";
-import { University } from "lucide-react";
 
 const QuestionGenerationParamsSchema = z.object({
   course: z.string().min(1, "Course is required"),
