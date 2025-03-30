@@ -298,9 +298,11 @@ export default function PastQuestionsPage() {
                     </div>
                   </CardContent>
                   <div className="p-6 pt-0 flex gap-2">
-                    <Button variant="outline" className="flex-1 rounded-full">
-                      Preview
-                    </Button>
+                    <Link href="https://drive.google.com/file/d/1cLalI0RaxSYSd08fRLQl6EcGSbuU-hRZ/view?usp=sharing">
+                      <Button variant="outline" className="flex-1 rounded-full">
+                        Preview
+                      </Button>
+                    </Link>
                     <Button className="flex-1 rounded-full">
                       <Download className="mr-2 h-4 w-4" />
                       Download

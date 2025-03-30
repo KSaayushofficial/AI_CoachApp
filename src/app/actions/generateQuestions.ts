@@ -26,33 +26,32 @@ const PROMPTS = {
     difficulty: string,
     numQuestions: number
   ) => `
-    Generate a diverse set of ${numQuestions} **unique and non-repetitive** questions 
-    for ${selectedCourse} students on **"${subtopic}"** within **${selectedSubject}** at a **${difficulty}** level.
-
-    ### **Diversity Requirements:**
-    Each question must focus on a **distinct aspect** of "${subtopic}". Ensure **conceptual depth** by covering:
-    - **Fundamentals** (definitions, key principles)
-    - **Practical Applications** (real-world use, industry relevance)
-    - **Challenges & Solutions** (limitations, security, optimization)
-    - **Comparative Analysis** (contrasting approaches, trade-offs)
-    - **Problem-Solving Scenarios** (case-based or code-based, if applicable)
-
-    Generate exactly ONE set of questions in the following format:
+    Generate a diverse set of ${numQuestions} **unique and high-quality** questions 
+    for ${selectedCourse} students on **"${subtopic}"** within **${selectedSubject}**.
     
-    1. **Multiple Choice Question (MCQ)** - A well-structured conceptual question with distinct answer choices.
-    2. **Short Answer Question** - A concise yet analytical question covering a specific concept or challenge.
-    3. **Long Answer Question** - A deep, **multi-perspective** question requiring a detailed response.
+    ### **Context & Depth Requirements:**
+    Before generating questions, provide a **2-3 sentence summary** explaining why 
+    "${subtopic}" is important in the context of "${selectedSubject}" and "${selectedCourse}".
 
-    ### **Rules for Generation:**
-    - **Ensure diversity**: Cover **different** aspects of "${subtopic}".
-    - **Avoid rewording**: No repetitive or rephrased versions of the same question.
-    - **Include real-world relevance**: Industry applications, security concerns, best practices.
-    - **Use examples where necessary**: Code snippets **only if they add clarity**.
+    ### **Diversity & Structure:**
+    Each question must focus on a **distinct and non-repetitive** aspect of "${subtopic}".  
+    Cover a mix of:
+    - **Fundamentals** (key principles, definitions)  
+    - **Real-World Applications** (practical use cases, industry relevance)  
+    - **Problem-Solving & Scenarios** (case-based or code-based, if applicable)  
+    - **Comparative Thinking** (trade-offs, alternative approaches)  
+
+    **Difficulty Level:**
+    - Ensure questions match a **"${difficulty}"** level, meaning:
+      - If "easy": Questions should reinforce basic understanding.
+      - If "medium": Questions should require conceptual analysis & real-world application.
+      - If "hard": Questions should demand deep critical thinking & problem-solving.
 
     ### **Strict JSON Output Format:**
     {
+      "subtopicSummary": "Brief explanation of '${subtopic}' and its relevance.",
       "mcq": {
-        "question": "A precise MCQ covering a unique aspect of '${subtopic}'",
+        "question": "A well-structured MCQ covering a unique aspect of '${subtopic}'",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": "Correct option text",
         "definition": "A clear explanation of the subtopic",
@@ -88,6 +87,7 @@ const PROMPTS = {
     }
   `,
 };
+
 
 
 
