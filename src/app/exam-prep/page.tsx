@@ -268,6 +268,7 @@ export default function ExamPrepPage() {
         university,
         subject: selectedSubject,
         difficulty,
+        subtopic: searchQuery || "General", // Provide a default value if searchQuery is empty
         numQuestions,
         type: "MCQ",
       });
@@ -858,7 +859,7 @@ export default function ExamPrepPage() {
               </Select>
             </div>
             <div className="space-y-2 ml-[80px]">
-              <Label>Search Questions</Label>
+              <Label>Search Subtopics</Label>
               <div className="relative w-50">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input

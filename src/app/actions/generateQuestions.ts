@@ -11,6 +11,7 @@ const QuestionGenerationParamsSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD", "MIXED"]),
   numQuestions: z.number().min(1).max(50),
+  subtopic: z.string().min(1, "Subtopic is required"),
   type: z.enum(["MCQ", "SHORT_ANSWER", "LONG_ANSWER"]),
 });
 
@@ -21,41 +22,50 @@ const PROMPTS = {
     university: string,
     selectedCourse: string,
     selectedSubject: string,
+    subtopic: string,
     difficulty: string,
     numQuestions: number
   ) => `
-    Generate unique comprehensive question set for ${selectedCourse} students   
-    covering ${selectedSubject} with ${difficulty} complexity.
+    Generate a set of ${numQuestions} unique and **non-repetitive** questions 
+    for ${selectedCourse} students covering the subtopic **"${subtopic}"** 
+    within **${selectedSubject}** at a **${difficulty}** level.
+
+    Each question must explore a **different aspect** of "${subtopic}" and should not be simple rewordings of the same idea.
+    **Ensure variety** by addressing different angles, use cases, or theoretical and practical perspectives.
 
     Generate exactly ONE set of questions with THREE types:
-    1. Multiple Choice Question (MCQ)
-    2. Short Answer Question
-    3. Long Answer Question
+    
+    1. **Multiple Choice Question (MCQ)** - A well-structured question with plausible answer choices.
+    2. **Short Answer Question** - A focused question requiring concise explanation or analysis.
+    3. **Long Answer Question** - A deep, analytical question demanding a detailed response.
 
-    IMPORTANT: Ensure questions are related and cover the same core academic concept.
-    Only include code examples if the question is programming-related.
+    ### **Rules for Generation:**
+    - **Ensure conceptual depth**: Cover **different** aspects of "${subtopic}".
+    - **Avoid repetition**: Do not generate variations of the same question.
+    - **Include real-world relevance**: If applicable, tie questions to industry applications.
+    - **Use examples where necessary**: For programming topics, include a code snippet **only if necessary**.
 
-    Respond STRICTLY in this JSON format:
+    ### **Strict JSON Output Format:**
     {
       "mcq": {
-        "question": "Precise unique and well structured MCQ text",
+        "question": "A unique and precise MCQ about '${subtopic}'",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": "Correct option text",
-        "definition" : "Give a clear and concise definition of the concept",
-        "explanation": "Comprehensive explanation"
+        "definition": "Provide a clear definition of the subtopic",
+        "explanation": "Explain the reasoning behind the correct answer"
       },
       "shortAnswer": {
-        "question": "Precise unique and well structured Focused short-answer question",
-        "definition" : "Give a clear and concise definition of the concept",
-        "sampleAnswer": "Concise 3-5 sentence analytical response. Include code if necessary.",
+        "question": "A unique and well-structured short-answer question about '${subtopic}'",
+        "definition": "Provide a concise definition of the subtopic",
+        "sampleAnswer": "3-5 sentence response analyzing the concept",
         "keywords": ["Key Concept 1", "Key Concept 2", "Key Concept 3"],
-        "explanation": "Brief rationale",
-        "codeExample": "Include a code snippet only if the question requires it."
+        "explanation": "Brief rationale behind the question",
+        "codeExample": "Include a code snippet only if relevant"
       },
       "longAnswer": {
-        "question": "Precise unique and well structured Comprehensive long-form analytical question",
-        "definition" : "Give a clear and concise definition of the concept",
-        "sampleAnswer": "Structured in-depth response. Include code if necessary.",
+        "question": "A deep and analytical long-answer question about '${subtopic}'",
+        "definition": "Provide a clear definition of the subtopic",
+        "sampleAnswer": "A structured in-depth response analyzing multiple perspectives",
         "keyPoints": [
           "Critical analytical point 1", 
           "Critical analytical point 2", 
@@ -63,13 +73,13 @@ const PROMPTS = {
           "Critical analytical point 4"
         ],
         "rubric": {
-          "comprehension": "Understanding criteria",
-          "analysis": "Critical thinking evaluation",
-          "integration": "Concept connection criteria",
-          "presentation": "Academic writing assessment"
+          "comprehension": "Criteria for understanding the topic",
+          "analysis": "Criteria for critical thinking",
+          "integration": "Criteria for connecting concepts",
+          "presentation": "Criteria for academic writing"
         },
-        "explanation": "Detailed question context",
-        "codeExample": "Include a code snippet only if the question requires it."
+        "explanation": "Detailed context for why this question is relevant",
+        "codeExample": "Include a code snippet only if relevant"
       }
     }
   `,
@@ -185,6 +195,7 @@ export async function generateAIQuestions(
         params.university,
         params.subject,
         params.difficulty,
+        params.subtopic,
         params.numQuestions
       );
 
