@@ -150,6 +150,29 @@ const DUMMY_QUESTIONS: QuestionWithExtras[] = [
   },
 ];
 
+const courses = [
+  {
+    id: "BCA",
+    name: "Bachelor of Computer Applications (BCA)",
+    subjects: [
+      "Data Structures",
+      "Database Management",
+      "Web Technology",
+      "Computer Networks",
+    ],
+  },
+  {
+    id: "BScCSIT",
+    name: "Bachelor of Science in Computer Science & IT (BSc CSIT)",
+    subjects: [
+      "Operating Systems",
+      "Artificial Intelligence",
+      "Software Engineering",
+      "Cloud Computing",
+    ],
+  },
+];
+
 function handleShowExplanation(question: string, explanation: string) {
   alert(`Question: ${question}\nExplanation: ${explanation}`);
 }
@@ -157,9 +180,7 @@ function handleShowExplanation(question: string, explanation: string) {
 export default function ExamPrepPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<QuestionType>("MCQ");
-  const [course, setCourse] = useState("");
   const [university, setUniversity] = useState("");
-  const [subject, setSubject] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("MEDIUM");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAIAssistant, setShowAIAssistant] = useState(false);
@@ -189,6 +210,10 @@ export default function ExamPrepPage() {
   );
   const [strengths, setStrengths] = useState<string[]>([]);
   const [weaknesses, setWeaknesses] = useState<string[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState("");
+
+  const selectedCourseData = courses.find((c) => c.id === selectedCourse);
 
   const totalQuestions = generatedQuestions.length;
   const completion = (answeredQuestions.size / totalQuestions) * 100;
@@ -203,10 +228,10 @@ export default function ExamPrepPage() {
 
     if (isCorrect) {
       setCorrectAnswers((prev) => prev + 1);
-      setStrengths((prev) => [...new Set([...prev, subject])]);
+      setStrengths((prev) => [...new Set([...prev, selectedCourse])]);
     } else {
       setIncorrectAnswers((prev) => prev + 1);
-      setWeaknesses((prev) => [...new Set([...prev, subject])]);
+      setWeaknesses((prev) => [...new Set([...prev, selectedSubject])]);
     }
   };
 
@@ -220,7 +245,7 @@ export default function ExamPrepPage() {
   );
 
   const handleGenerateQuestions = async () => {
-    if (!course || !subject || !university) {
+    if (!selectedCourse || !selectedSubject || !university) {
       toast({
         title: "Missing information",
         description:
@@ -239,9 +264,9 @@ export default function ExamPrepPage() {
 
     try {
       const questions = await generateAIQuestions({
-        course,
+        course: selectedCourse,
         university,
-        subject,
+        subject: selectedSubject,
         difficulty,
         numQuestions,
         type: "MCQ",
@@ -276,7 +301,7 @@ export default function ExamPrepPage() {
       setCurrentQuestionIndex(0);
       toast({
         title: "Questions generated",
-        description: `${questions.length} questions for ${subject} have been generated.`,
+        description: `${questions.length} questions for ${selectedSubject} have been generated.`,
       });
     } catch (error) {
       toast({
@@ -775,20 +800,8 @@ export default function ExamPrepPage() {
 
       <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label>Course</Label>
-              <Select value={course} onValueChange={setCourse}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select course" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BCA">BCA</SelectItem>
-                  <SelectItem value="BSc.CSIT">BSc.CSIT</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* <div className="space-y-2">
               <Label>University</Label>
               <Select value={university} onValueChange={setUniversity}>
                 <SelectTrigger>
@@ -798,26 +811,42 @@ export default function ExamPrepPage() {
                   <SelectItem value="Tribhuvan University">TU</SelectItem>
                 </SelectContent>
               </Select>
+            </div> */}
+            <div className="space-y-2">
+              <Label>Course</Label>
+              <Select
+                value={selectedCourse}
+                onValueChange={(value) => {
+                  setSelectedCourse(value);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Subject</Label>
-              <Select value={subject} onValueChange={setSubject}>
+              <Select
+                disabled={!selectedCourse}
+                onValueChange={setSelectedSubject}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select subject" />
+                  <SelectValue placeholder={"Select Subject"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Object-Oriented Programming">
-                    OOP in Java
-                  </SelectItem>
-                  <SelectItem value="Data Structure & Algorithm">
-                    Data Structure & Algorithm
-                  </SelectItem>
-                  <SelectItem value="System Analysis & Design">
-                    System Analysis & Design
-                  </SelectItem>
-                  <SelectItem value="Probability & Statistics">
-                    Probability & Statistics
-                  </SelectItem>
+                  {selectedCourseData?.subjects.map((subject: string) => (
+                    <SelectItem key={subject} value={subject}>
+                      {subject}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

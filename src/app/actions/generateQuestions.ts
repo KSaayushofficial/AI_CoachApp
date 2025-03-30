@@ -24,7 +24,7 @@ const PROMPTS = {
     difficulty: string,
     numQuestions: number
   ) => `
-    Generate comprehensive question set for ${course} students at ${university} 
+    Generate unique comprehensive question set for ${course} students at ${university} 
     covering ${subject} with ${difficulty} complexity.
 
     Generate exactly ONE set of questions with THREE types:
