@@ -41,11 +41,6 @@ const PROMPTS = {
     - **Problem-Solving & Scenarios** (case-based or code-based, if applicable)  
     - **Comparative Thinking** (trade-offs, alternative approaches)  
 
-    **Difficulty Level:**
-    - Ensure questions match a **"${difficulty}"** level, meaning:
-      - If "easy": Questions should reinforce basic understanding.
-      - If "medium": Questions should require conceptual analysis & real-world application.
-      - If "hard": Questions should demand deep critical thinking & problem-solving.
 
     ### **Strict JSON Output Format:**
     {
