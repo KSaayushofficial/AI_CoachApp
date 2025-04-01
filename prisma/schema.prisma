@@ -7,29 +7,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User and Authentication Models
 model User {
-  id              String           @id @default(uuid())
-  clerkUserID     String           @unique
-  email           String           @unique
-  name            String?
-  imageUrl        String?
-  industry        String?
-  industryInsight IndustryInsight? @relation(fields: [industry], references: [industry])
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  bio             String?
-  experience      Int?
-  skills          String[]
-
-  assessments      Assessments[]
-  questionAttempts QuestionAttempt[]
-  savedQuestions   SavedQuestion[]
-  progress         UserProgress[]
+  id                  String           @id @default(uuid())
+  clerkUserID         String           @unique
+  email               String           @unique
+  name                String?
+  imageUrl            String?
+  industry            String?
+  industryInsight    IndustryInsight? @relation(fields: [industry], references: [industry])
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  bio                 String?
+  experience          Int?
+  skills              String[]
+  assessments         Assessments[]
+  questionAttempts    QuestionAttempt[]
+  savedQuestions      SavedQuestion[]
+  progress            UserProgress[]
+  generatedQuestions  GeneratedQuestion[]  // Added this line to fix the relation
 }
 
-// Assessment and Progress Models
+model GeneratedQuestion {
+  id              String   @id @default(cuid())
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String
+  questionText    String
+  answerText      String
+  formatType      String   // "explanation", "comparison", "advantages", etc.
+  questionType    QuestionType
+  difficulty      Difficulty
+  course          String?
+  subject         String?
+  university      String?
+  subtopic       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([userId])
+}
+
 model Assessments {
   id             String   @id @default(cuid())
   userId         String
@@ -40,7 +55,6 @@ model Assessments {
   improvementTip String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-
   @@index([userId])
 }
 
@@ -55,11 +69,9 @@ model UserProgress {
   lastAttempted      DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
-
   @@unique([userId, subjectId])
 }
 
-// Industry and Market Models
 model IndustryInsight {
   id                String        @id @default(cuid())
   industry          String        @unique
@@ -73,11 +85,9 @@ model IndustryInsight {
   recommendedSkills String[]
   lastUpdated       DateTime      @default(now())
   nextUpdated       DateTime
-
   @@index([industry])
 }
 
-// Enums for Industry and Market
 enum DemandLevel {
   HIGH
   MEDIUM
@@ -90,7 +100,6 @@ enum MarketOutlook {
   NEGATIVE
 }
 
-// Educational Institution Models
 model University {
   id         String      @id @default(cuid())
   name       String      @unique
@@ -111,7 +120,6 @@ model Course {
   subjects     Subject[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-
   @@unique([name, universityId])
 }
 
@@ -126,11 +134,9 @@ model Subject {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   userProgress UserProgress[]
-
   @@unique([name, courseId])
 }
 
-// Question and Assessment Models
 model Question {
   id              String          @id @default(cuid())
   type            QuestionType
@@ -143,31 +149,24 @@ model Question {
   explanation     String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
-
-  // Question type specific relations
   mcqData         MCQData?
   shortAnswerData ShortAnswerData?
   longAnswerData  LongAnswerData?
-
-  // Relationships
   attempts        QuestionAttempt[]
   pastPapers      PastPaperQuestion[]
   savedBy         SavedQuestion[]
-
   @@index([subjectId])
   @@index([difficulty])
   @@index([type])
 }
 
-// Question Type Specific Models
 model MCQData {
   id               String    @id @default(cuid())
   question         Question  @relation(fields: [questionId], references: [id])
   questionId       String    @unique
-  options          Json      // Array of options
+  options          Json
   correctAnswer    String
   explanation      String
-  distractorAnalysis String?
 }
 
 model ShortAnswerData {
@@ -175,7 +174,6 @@ model ShortAnswerData {
   question        Question  @relation(fields: [questionId], references: [id])
   questionId      String    @unique
   sampleAnswer    String
-  keywords        String[]  // Important keywords for grading
   explanation     String
 }
 
@@ -183,13 +181,10 @@ model LongAnswerData {
   id              String    @id @default(cuid())
   question        Question  @relation(fields: [questionId], references: [id])
   questionId      String    @unique
-  rubric          Json      // Grading rubric
   sampleAnswer    String
-  keyPoints       String[]  // Important points to include
   explanation     String?
 }
 
-// Enums for Question Properties
 enum QuestionType {
   MCQ
   SHORT_ANSWER
@@ -202,7 +197,6 @@ enum Difficulty {
   HARD
 }
 
-// Past Paper and Media Models
 model PastPaper {
   id           String              @id @default(cuid())
   title        String
@@ -226,7 +220,6 @@ model PastPaperQuestion {
   questionId  String
   marks       Int?
   createdAt   DateTime  @default(now())
-
   @@unique([pastPaperId, questionId])
 }
 
@@ -242,7 +235,6 @@ model Media {
   updatedAt DateTime  @updatedAt
 }
 
-// Additional Tracking and Interaction Models
 model QuestionAttempt {
   id             String    @id @default(cuid())
   user           User      @relation(fields: [userId], references: [id])
@@ -251,10 +243,9 @@ model QuestionAttempt {
   questionId     String
   isCorrect      Boolean
   selectedAnswer String?
-  timeSpent      Int?      // in seconds
+  timeSpent      Int?
   feedback       Feedback?
   createdAt      DateTime  @default(now())
-
   @@index([userId])
   @@index([questionId])
 }
@@ -266,11 +257,9 @@ model SavedQuestion {
   question   Question @relation(fields: [questionId], references: [id])
   questionId String
   createdAt  DateTime @default(now())
-
   @@unique([userId, questionId])
 }
 
-// Enums for Additional Models
 enum Semester {
   SPRING
   FALL

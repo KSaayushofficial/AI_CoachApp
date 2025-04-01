@@ -19,3 +19,4 @@ export type GenerateQuestionsParams = {
   numQuestions: number;
   type: string;
 };
+

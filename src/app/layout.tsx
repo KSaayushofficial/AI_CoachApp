@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import {SiteHeader} from "@/components/shared/site-header";
+import { SiteHeader } from "@/components/shared/site-header";
 import { SiteFooter } from "@/components/shared/site-footer";
 import "./globals.css";
 
@@ -56,6 +56,7 @@ export default function RootLayout({
         `}
       >
         <ClerkProvider
+          signInFallbackRedirectUrl="/dashboard" // Add this to replace deprecated afterSignInUrl
           appearance={{
             variables: {
               colorPrimary: "#454545",

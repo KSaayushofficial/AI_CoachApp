@@ -1,7 +1,12 @@
-import { QuestionWithAnswers } from "@/types/index";
+import { Question } from "@prisma/client";
 
 interface LongAnswerQuestionProps {
-  question: QuestionWithAnswers;
+  question: Question & {
+    longAnswerData?: {
+      sampleAnswer: string;
+      explanation?: string | null;
+    } | null;
+  };
   onAnswerSelect: (answer: string) => void;
   selectedAnswer?: string;
 }
@@ -26,12 +31,12 @@ export const LongAnswerQuestion = ({
         <div className="p-4 rounded-lg bg-muted">
           <p className="font-medium">Sample Answer:</p>
           <p>{question.longAnswerData.sampleAnswer}</p>
-          <p className="mt-2 font-medium">Key Points:</p>
-          <ul className="list-disc pl-5">
-            {question.longAnswerData.keyPoints.map((point, index) => (
-              <li key={index}>{point}</li>
-            ))}
-          </ul>
+          {question.longAnswerData.explanation && (
+            <>
+              <p className="mt-2 font-medium">Explanation:</p>
+              <p>{question.longAnswerData.explanation}</p>
+            </>
+          )}
         </div>
       )}
     </div>

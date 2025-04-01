@@ -6,6 +6,7 @@ const isProtectedRoute = createRouteMatcher([
   "/resume(.*)",
   "/interviews(.*)",
   "/settings(.*)",
+  "/api/clerk-webhooks",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

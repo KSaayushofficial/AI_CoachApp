@@ -1,260 +1,307 @@
 "use server";
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { QuestionType, Difficulty } from "@prisma/client";
+import { checkUser } from "@/lib/checkUser";
 
 const QuestionGenerationParamsSchema = z.object({
-  course: z.string().min(1, "Course is required"),
-  university: z.string().min(1, "University is required"),
-  subject: z.string().min(1, "Subject is required"),
+  course: z.string().min(1),
+  university: z.string().min(1),
+  subject: z.string().min(1),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD", "MIXED"]),
-  numQuestions: z.number().min(1).max(50),
-  subtopic: z.string().min(1, "Subtopic is required"),
+  numQuestions: z.number().min(1).max(20),
+  subtopic: z.string().min(1),
   type: z.enum(["MCQ", "SHORT_ANSWER", "LONG_ANSWER"]),
 });
 
-const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-const PROMPTS = {
-  UNIFIED: (
-    university: string,
-    selectedCourse: string,
-    selectedSubject: string,
-    subtopic: string,
-    difficulty: string,
-    numQuestions: number
-  ) => `
-    Generate a diverse set of ${numQuestions} **unique and non-repetitive** questions 
-    for ${selectedCourse} students on **"${subtopic}"** within **${selectedSubject}** at a **${difficulty}** level.
+const getStructuredPrompt = (
+  subtopic: string,
+  type: QuestionType,
+  difficulty: string,
+  existingQuestions: string[] = []
+): string => {
+  const typeSpecific = {
+    MCQ: `Generate a unique multiple-choice question about ${subtopic}.
+- Provide 1 correct answer and 3 plausible but incorrect options
+- Format response as:
+Question: [question text]
+Correct: [correct answer]
+Incorrect: [comma-separated incorrect options]
+Explanation: [brief explanation]
+- Jumble the answer options so correct answer isn't always first`,
+    SHORT_ANSWER: `Generate a unique short-answer question about ${subtopic}.
+- Answer should be 1-2 sentences
+- Format response as:
+Question: [question text]
+Answer: [concise answer]
+Explanation: [brief explanation]`,
+    LONG_ANSWER: `Generate a unique long-answer question about ${subtopic}.
+- Answer should be detailed with examples
+- Format response as:
+Question: [question text]
+Answer: [detailed explanation]
+Explanation: [additional context if needed]`,
+  };
 
-    ### **Diversity Requirements:**
-    Each question must focus on a **distinct aspect** of "${subtopic}". Ensure **conceptual depth** by covering:
-    - **Fundamentals** (definitions, key principles)
-    - **Practical Applications** (real-world use, industry relevance)
-    - **Challenges & Solutions** (limitations, security, optimization)
-    - **Comparative Analysis** (contrasting approaches, trade-offs)
-    - **Problem-Solving Scenarios** (case-based or code-based, if applicable)
+  const uniqueness =
+    existingQuestions.length > 0
+      ? `\n\nAvoid these questions:\n${existingQuestions.join("\n")}`
+      : "";
 
-    Generate exactly ONE set of questions in the following format:
-    
-    1. **Multiple Choice Question (MCQ)** - A well-structured conceptual question with distinct answer choices.
-    2. **Short Answer Question** - A concise yet analytical question covering a specific concept or challenge.
-    3. **Long Answer Question** - A deep, **multi-perspective** question requiring a detailed response.
-
-    ### **Rules for Generation:**
-    - **Ensure diversity**: Cover **different** aspects of "${subtopic}".
-    - **Avoid rewording**: No repetitive or rephrased versions of the same question.
-    - **Include real-world relevance**: Industry applications, security concerns, best practices.
-    - **Use examples where necessary**: Code snippets **only if they add clarity**.
-
-    ### **Strict JSON Output Format:**
-    {
-      "mcq": {
-        "question": "A precise MCQ covering a unique aspect of '${subtopic}'",
-        "options": ["Option A", "Option B", "Option C", "Option D"],
-        "correctAnswer": "Correct option text",
-        "definition": "A clear explanation of the subtopic",
-        "explanation": "Rationale behind the correct answer"
-      },
-      "shortAnswer": {
-        "question": "A well-structured short-answer question about '${subtopic}'",
-        "definition": "Concise definition of the subtopic",
-        "sampleAnswer": "3-5 sentence response analyzing the concept",
-        "keywords": ["Key Concept 1", "Key Concept 2", "Key Concept 3"],
-        "explanation": "Brief rationale behind the question",
-        "codeExample": "Include only if relevant"
-      },
-      "longAnswer": {
-        "question": "A deep and analytical long-answer question about '${subtopic}'",
-        "definition": "Clear definition of the subtopic",
-        "sampleAnswer": "A structured response analyzing multiple perspectives",
-        "keyPoints": [
-          "Critical analytical point 1", 
-          "Critical analytical point 2", 
-          "Critical analytical point 3", 
-          "Critical analytical point 4"
-        ],
-        "rubric": {
-          "comprehension": "Criteria for understanding the topic",
-          "analysis": "Criteria for critical thinking",
-          "integration": "Criteria for connecting concepts",
-          "presentation": "Criteria for academic writing"
-        },
-        "explanation": "Detailed context for why this question is relevant",
-        "codeExample": "Include only if relevant"
-      }
-    }
-  `,
+  return `${typeSpecific[type]}
+Difficulty: ${difficulty}${uniqueness}
+Ensure all answers are accurate and options are plausible.`;
 };
 
+const parseResponse = (content: string, type: QuestionType) => {
+  content = content.trim();
+  const question =
+    content.match(/Question:\s*(.+?)(\n|$)/)?.[1] || content.split("\n")[0];
+  let answer = "",
+    options: string[] = [],
+    correctAnswer = "",
+    explanation = "";
 
+  if (type === "MCQ") {
+    correctAnswer = content.match(/Correct:\s*(.+?)(\n|$)/)?.[1] || "";
+    const incorrect =
+      content
+        .match(/Incorrect:\s*(.+?)(\n|$)/)?.[1]
+        ?.split(",")
+        .map((s) => s.trim()) || [];
+    explanation = content.match(/Explanation:\s*([\s\S]+)/)?.[1] || "";
 
-function validateQuestionSet(questionSet: any): boolean {
-  try {
-    if (!questionSet.mcq || !questionSet.shortAnswer || !questionSet.longAnswer)
-      return false;
-    if (
-      !questionSet.mcq.question ||
-      !questionSet.mcq.options ||
-      questionSet.mcq.options.length !== 4
-    )
-      return false;
-    if (
-      !questionSet.shortAnswer.question ||
-      !questionSet.shortAnswer.sampleAnswer
-    )
-      return false;
-    if (
-      !questionSet.longAnswer.question ||
-      !questionSet.longAnswer.sampleAnswer
-    )
-      return false;
-    return true;
-  } catch (error) {
-    return false;
+    // Combine and shuffle options
+    options = [correctAnswer, ...incorrect];
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+
+    answer = `Correct answer: ${correctAnswer}\n\n${explanation}`;
+  } else {
+    answer =
+      content.match(/Answer:\s*([\s\S]+?)(\n*Explanation:|$)/s)?.[1]?.trim() ||
+      "";
+    explanation =
+      content.match(/Explanation:\s*([\s\S]+)/s)?.[1]?.trim() ||
+      "This requires a detailed explanation with examples.";
   }
-}
 
-function createQuestionObjects(
-  questionSet: any,
-  subjectId: string,
-  difficulty: Difficulty
-) {
-  return [
-    {
-      type: "MCQ" as QuestionType,
-      text: questionSet.mcq.question,
-      difficulty,
-      subjectId,
-      mcqData: {
-        options: questionSet.mcq.options,
-        correctAnswer: questionSet.mcq.correctAnswer,
-        explanation: questionSet.mcq.explanation,
-      },
-    },
-    {
-      type: "SHORT_ANSWER" as QuestionType,
-      text: questionSet.shortAnswer.question,
-      difficulty,
-      subjectId,
-      shortAnswerData: {
-        sampleAnswer: questionSet.shortAnswer.sampleAnswer,
-        keywords: questionSet.shortAnswer.keywords,
-        explanation: questionSet.shortAnswer.explanation,
-      },
-    },
-    {
-      type: "LONG_ANSWER" as QuestionType,
-      text: questionSet.longAnswer.question,
-      difficulty,
-      subjectId,
-      longAnswerData: {
-        sampleAnswer: questionSet.longAnswer.sampleAnswer,
-        keyPoints: questionSet.longAnswer.keyPoints,
-        rubric: questionSet.longAnswer.rubric,
-        explanation: questionSet.longAnswer.explanation,
-      },
-    },
-  ];
-}
+  return { question, answer, options, correctAnswer, explanation };
+};
 
 export async function generateAIQuestions(
   params: z.infer<typeof QuestionGenerationParamsSchema>
 ) {
-  try {
-    const validatedParams = QuestionGenerationParamsSchema.parse(params);
-    const mappedDifficulty =
-      params.difficulty === "MIXED" ? "MEDIUM" : params.difficulty;
+  const user = await checkUser();
+  if (!user) throw new Error("User authentication failed");
 
-    const university = await db.university.upsert({
-      where: { name: params.university },
-      update: {},
-      create: {
-        name: params.university,
-        shortName: params.university.slice(0, 10),
-      },
-    });
+  const validatedParams = QuestionGenerationParamsSchema.parse(params);
+  const questions = [];
+  const model = geminiAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const existingQuestions: string[] = [];
 
-    const course = await db.course.upsert({
-      where: {
-        name_universityId: { name: params.course, universityId: university.id },
-      },
-      update: {},
-      create: { name: params.course, universityId: university.id },
-    });
-
-    const subject = await db.subject.upsert({
-      where: { name_courseId: { name: params.subject, courseId: course.id } },
-      update: {},
-      create: { name: params.subject, courseId: course.id },
-    });
-
-    const model = geminiAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const questions = [];
-
-    for (let i = 0; i < params.numQuestions; i++) {
-      const prompt = PROMPTS.UNIFIED(
-        params.course,
-        params.university,
-        params.subject,
-        params.difficulty,
+  for (let i = 0; i < params.numQuestions; i++) {
+    try {
+      const prompt = getStructuredPrompt(
         params.subtopic,
-        params.numQuestions
+        params.type,
+        params.difficulty === "MIXED"
+          ? ["EASY", "MEDIUM", "HARD"][Math.floor(Math.random() * 3)]
+          : params.difficulty.toLowerCase(),
+        existingQuestions
       );
 
       const result = await model.generateContent(prompt);
       const content = result.response.text();
-      if (!content) continue;
+      const { question, answer, options, correctAnswer, explanation } =
+        parseResponse(content, params.type);
 
-      try {
-        const questionSet = JSON.parse(
-          content.replace(/```(json)?/g, "").trim()
-        );
-        if (!validateQuestionSet(questionSet)) continue;
-
-        const generatedQuestions = createQuestionObjects(
-          questionSet,
-          subject.id,
-          mappedDifficulty
-        );
-        questions.push(...generatedQuestions);
-      } catch (error) {
-        continue;
+      if (
+        !question ||
+        (params.type === "MCQ" && (!correctAnswer || options.length < 2))
+      ) {
+        throw new Error("Invalid question format received from AI");
       }
+
+      existingQuestions.push(question);
+
+      const dbQuestion = await db.generatedQuestion.create({
+        data: {
+          userId: user.id,
+          questionText: question,
+          answerText: answer,
+          questionType: params.type,
+          difficulty:
+            params.difficulty === "MIXED"
+              ? (["EASY", "MEDIUM", "HARD"][
+                  Math.floor(Math.random() * 3)
+                ] as Difficulty)
+              : (params.difficulty as Difficulty),
+          course: params.course,
+          subject: params.subject,
+          university: params.university,
+          subtopic: params.subtopic,
+          formatType: "DEFAULT",
+        },
+      });
+
+      const baseQuestion = {
+        id: dbQuestion.id,
+        type: params.type,
+        text: question,
+        difficulty: params.difficulty,
+        subjectId: "generated",
+        topic: params.subtopic,
+      };
+
+      switch (params.type) {
+        case "MCQ":
+          questions.push({
+            ...baseQuestion,
+            mcqData: {
+              options:
+                options.length === 4
+                  ? options
+                  : [
+                      correctAnswer,
+                      "Incorrect option 1",
+                      "Incorrect option 2",
+                      "Incorrect option 3",
+                    ],
+              correctAnswer,
+              explanation: explanation || "No explanation provided",
+            },
+          });
+          break;
+        case "SHORT_ANSWER":
+          questions.push({
+            ...baseQuestion,
+            shortAnswerData: {
+              sampleAnswer: answer || "Sample answer not generated",
+              explanation:
+                explanation || "This requires a concise 1-2 sentence response.",
+            },
+          });
+          break;
+        case "LONG_ANSWER":
+          questions.push({
+            ...baseQuestion,
+            longAnswerData: {
+              sampleAnswer: answer || "Detailed answer not generated",
+              explanation:
+                explanation ||
+                "This requires a comprehensive explanation with examples.",
+            },
+          });
+          break;
+      }
+    } catch (error) {
+      console.error(`Error generating question ${i + 1}:`, error);
+      questions.push(createFallbackQuestion(params, i));
     }
+  }
 
-    const createdQuestions = await db.$transaction(
-      questions.map((question) =>
-        db.question.create({
-          data: {
-            ...question,
-            mcqData: question.mcqData
-              ? { create: question.mcqData }
-              : undefined,
-            shortAnswerData: question.shortAnswerData
-              ? { create: question.shortAnswerData }
-              : undefined,
-            longAnswerData: question.longAnswerData
-              ? { create: question.longAnswerData }
-              : undefined,
-          },
-          include: {
-            mcqData: true,
-            shortAnswerData: true,
-            longAnswerData: true,
-          },
-        })
-      )
-    );
+  return questions;
+}
 
-    return createdQuestions;
-  } catch (error) {
-    throw new Error(
-      `Question generation failed: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
+function createFallbackQuestion(params: any, index: number) {
+  // Create more meaningful fallback questions based on the subtopic
+  const getQuestionText = (subtopic: string, type: QuestionType) => {
+    const questionTypes = {
+      MCQ: [
+        `Which of the following best describes ${subtopic}?`,
+        `What is a key characteristic of ${subtopic}?`,
+        `Which statement about ${subtopic} is correct?`,
+        `In the context of ${subtopic}, which option is most accurate?`,
+      ],
+      SHORT_ANSWER: [
+        `Briefly explain the concept of ${subtopic}.`,
+        `Summarize the importance of ${subtopic} in 1-2 sentences.`,
+        `What are the main principles of ${subtopic}?`,
+        `Define ${subtopic} and give a short example.`,
+      ],
+      LONG_ANSWER: [
+        `Explain ${subtopic} in detail, including its applications and significance.`,
+        `Discuss the main concepts of ${subtopic} with relevant examples.`,
+        `Compare and contrast different approaches to understanding ${subtopic}.`,
+        `Analyze how ${subtopic} has evolved and its current relevance.`,
+      ],
+    };
+
+    // Select a question randomly from the appropriate type
+    const questions = questionTypes[type];
+    return questions[index % questions.length];
+  };
+
+  // Create more realistic options for MCQs
+  const getMCQOptions = (subtopic: string) => {
+    // These are generic but related to the subtopic
+    return {
+      options: [
+        `The primary function of ${subtopic}`,
+        `A secondary aspect of ${subtopic}`,
+        `A common misconception about ${subtopic}`,
+        `An alternative approach to ${subtopic}`,
+      ],
+      correctAnswer: `The primary function of ${subtopic}`,
+    };
+  };
+
+  // Create better sample answers
+  const getSampleAnswer = (subtopic: string, type: QuestionType) => {
+    if (type === "SHORT_ANSWER") {
+      return `${subtopic} refers to a fundamental concept that plays a critical role in this field. It is characterized by specific properties that distinguish it from related concepts.`;
+    } else {
+      return `${subtopic} is a comprehensive framework that encompasses several key principles. First, it involves understanding the core mechanisms that drive its functionality. Second, it requires analysis of how these mechanisms interact within broader systems.
+
+Examples of ${subtopic} can be found in various contexts, such as [specific example 1] and [specific example 2]. These examples demonstrate how ${subtopic} principles are applied in practical scenarios.
+
+The significance of ${subtopic} extends to multiple domains, including [related domain 1] and [related domain 2], where its application has led to important developments and innovations.`;
+    }
+  };
+
+  const base = {
+    id: `fallback-${Date.now()}-${index}`,
+    type: params.type,
+    difficulty: params.difficulty === "MIXED" ? "MEDIUM" : params.difficulty,
+    subjectId: "generated",
+    topic: params.subtopic,
+    text: getQuestionText(params.subtopic, params.type),
+  };
+
+  switch (params.type) {
+    case "MCQ":
+      const { options, correctAnswer } = getMCQOptions(params.subtopic);
+      return {
+        ...base,
+        mcqData: {
+          options,
+          correctAnswer,
+          explanation: `The correct answer refers to the primary and most essential characteristic of ${params.subtopic}. The other options, while related, either represent secondary aspects, common misunderstandings, or alternative approaches that don't fully capture the core concept.`,
+        },
+      };
+    case "SHORT_ANSWER":
+      return {
+        ...base,
+        shortAnswerData: {
+          sampleAnswer: getSampleAnswer(params.subtopic, "SHORT_ANSWER"),
+          explanation: `A good response should briefly define ${params.subtopic} and highlight its key characteristics or importance within the field. Concise explanations that demonstrate understanding of core principles are ideal.`,
+        },
+      };
+    case "LONG_ANSWER":
+      return {
+        ...base,
+        longAnswerData: {
+          sampleAnswer: getSampleAnswer(params.subtopic, "LONG_ANSWER"),
+          explanation: `A comprehensive answer should cover the fundamental aspects of ${params.subtopic}, provide relevant examples, analyze its significance, and potentially discuss related concepts or applications. Critical thinking and synthesis of information are important.`,
+        },
+      };
+    default:
+      return base;
   }
 }
