@@ -41,7 +41,7 @@ interface GeneratedQuestion {
   type: QuestionType;
   text: string;
   difficulty: Difficulty;
-  subject?: string; // Made optional to match the incoming data
+  subject?: string;
   course: string;
   university: string;
   explanation?: string;
@@ -155,6 +155,12 @@ export default function ExamPrepPage() {
   const [weaknesses, setWeaknesses] = useState<string[]>([]);
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
+  const [userShortAnswers, setUserShortAnswers] = useState<
+    Record<string, string>
+  >({});
+  const [userLongAnswers, setUserLongAnswers] = useState<
+    Record<string, string>
+  >({});
 
   const selectedCourseData = courses.find((c) => c.id === selectedCourse);
   const questionsToDisplay =
@@ -162,8 +168,7 @@ export default function ExamPrepPage() {
   const filteredQuestions = questionsToDisplay.filter(
     (q) => q.type === activeTab
   );
-  const currentQuestionData =
-    filteredQuestions[currentQuestionIndex] || filteredQuestions[0];
+  const currentQuestionData = filteredQuestions[currentQuestionIndex];
   const totalQuestions = questionsToDisplay.length;
   const completion = (answeredQuestions.size / totalQuestions) * 100;
   const accuracy =
@@ -233,7 +238,10 @@ export default function ExamPrepPage() {
         questions.map((q) => ({
           ...q,
           explanation:
-            q.type === "MCQ" && "mcqData" in q ? (q.mcqData as GeneratedQuestion["mcqData"])?.explanation ?? undefined : undefined,
+            q.type === "MCQ" && "mcqData" in q
+              ? (q.mcqData as GeneratedQuestion["mcqData"])?.explanation ??
+                undefined
+              : undefined,
           course: selectedCourse,
           university,
         }))
@@ -289,7 +297,7 @@ export default function ExamPrepPage() {
       );
     }
 
-    if (!question.mcqData) return null;
+    if (!question?.mcqData) return null;
 
     const { id, text, mcqData, explanation } = question;
     const { options, correctAnswer } = mcqData;
@@ -391,10 +399,12 @@ export default function ExamPrepPage() {
       );
     }
 
-    if (!question.shortAnswerData) return null;
+    if (!question?.shortAnswerData) return null;
 
     const { id, text, shortAnswerData, explanation } = question;
     const { sampleAnswer } = shortAnswerData;
+    const userAnswer = userShortAnswers[id] || "";
+    const hasAnswered = showAnswers[id];
 
     return (
       <div className="space-y-6">
@@ -402,15 +412,53 @@ export default function ExamPrepPage() {
           <p className="font-medium">{text}</p>
         </div>
 
-        <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-green-500">Model Answer</h4>
-              <p className="text-sm mt-1">{sampleAnswer}</p>
-              <p className="text-sm mt-2">{explanation}</p>
-            </div>
+        <div className="space-y-4">
+          <div className="p-4 rounded-lg border border-border/10 bg-background/80">
+            <Label>Your Answer</Label>
+            <textarea
+              className="w-full mt-2 p-2 border rounded-lg min-h-[100px]"
+              placeholder="Type your answer here..."
+              value={userAnswer}
+              onChange={(e) =>
+                setUserShortAnswers((prev) => ({
+                  ...prev,
+                  [id]: e.target.value,
+                }))
+              }
+              disabled={hasAnswered}
+            />
+            {!hasAnswered && (
+              <Button
+                className="mt-2"
+                onClick={() =>
+                  setShowAnswers((prev) => ({ ...prev, [id]: true }))
+                }
+                disabled={!userAnswer}
+              >
+                Submit Answer
+              </Button>
+            )}
           </div>
+
+          {hasAnswered && (
+            <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-green-500">Model Answer</h4>
+                  <p className="text-sm mt-1">{sampleAnswer}</p>
+                  {explanation && (
+                    <>
+                      <h4 className="font-medium text-green-500 mt-2">
+                        Explanation
+                      </h4>
+                      <p className="text-sm mt-1">{explanation}</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -426,10 +474,12 @@ export default function ExamPrepPage() {
       );
     }
 
-    if (!question.longAnswerData) return null;
+    if (!question?.longAnswerData) return null;
 
     const { id, text, longAnswerData, explanation } = question;
     const { sampleAnswer } = longAnswerData;
+    const userAnswer = userLongAnswers[id] || "";
+    const hasAnswered = showAnswers[id];
 
     return (
       <div className="space-y-6">
@@ -437,15 +487,53 @@ export default function ExamPrepPage() {
           <p className="font-medium">{text}</p>
         </div>
 
-        <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-green-500">Answer</h4>
-              <p className="text-sm mt-1">{sampleAnswer}</p>
-              <p className="text-sm mt-2">{explanation}</p>
-            </div>
+        <div className="space-y-4">
+          <div className="p-4 rounded-lg border border-border/10 bg-background/80">
+            <Label>Your Answer</Label>
+            <textarea
+              className="w-full mt-2 p-2 border rounded-lg min-h-[150px]"
+              placeholder="Type your detailed answer here..."
+              value={userAnswer}
+              onChange={(e) =>
+                setUserLongAnswers((prev) => ({
+                  ...prev,
+                  [id]: e.target.value,
+                }))
+              }
+              disabled={hasAnswered}
+            />
+            {!hasAnswered && (
+              <Button
+                className="mt-2"
+                onClick={() =>
+                  setShowAnswers((prev) => ({ ...prev, [id]: true }))
+                }
+                disabled={!userAnswer}
+              >
+                Submit Answer
+              </Button>
+            )}
           </div>
+
+          {hasAnswered && (
+            <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-green-500">Model Answer</h4>
+                  <p className="text-sm mt-1">{sampleAnswer}</p>
+                  {explanation && (
+                    <>
+                      <h4 className="font-medium text-green-500 mt-2">
+                        Explanation
+                      </h4>
+                      <p className="text-sm mt-1">{explanation}</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

@@ -24,15 +24,14 @@ const getStructuredPrompt = (
   existingQuestions: string[] = []
 ): string => {
   const typeSpecific = {
-    MCQ: `Generate a unique, well-structured multiple-choice question about ${subtopic}.
-- Provide 4 realistic answer options that are domain-specific, not generic (like "a, b, c, d").
+    MCQ: `Generate a unique multiple-choice question about ${subtopic}.
+- Provide 1 correct answer and 3 plausible but incorrect options
 - Format response as:
 Question: [question text]
 Correct: [correct answer]
-Incorrect: [incorrect answer 1], [incorrect answer 2], [incorrect answer 3]
-Explanation: [brief explanation of why the correct answer is right]
-- Ensure all answer options are logical and non-repetitive.
-- Shuffle the answer choices randomly.`,
+Incorrect: [comma-separated incorrect options]
+Explanation: [brief explanation]
+- Jumble the answer options so correct answer isn't always first`,
     SHORT_ANSWER: `Generate a unique short-answer question about ${subtopic}.
 - Answer should be 1-2 sentences
 - Format response as:
@@ -67,34 +66,29 @@ const parseResponse = (content: string, type: QuestionType) => {
     explanation = "";
 
   if (type === "MCQ") {
-    correctAnswer = content.match(/Correct:\s*(.+?)(\n|$)/)?.[1]?.trim() || "";
-    let incorrectMatches = content.match(/Incorrect:\s*(.+?)(\n|$)/);
+    correctAnswer = content.match(/Correct:\s*(.+?)(\n|$)/)?.[1] || "";
+    const incorrect =
+      content
+        .match(/Incorrect:\s*(.+?)(\n|$)/)?.[1]
+        ?.split(",")
+        .map((s) => s.trim()) || [];
+    explanation = content.match(/Explanation:\s*([\s\S]+)/)?.[1] || "";
 
-    const incorrectOptions =
-      incorrectMatches && incorrectMatches[1]
-        ? incorrectMatches[1].split(",").map((s) => s.trim())
-        : [];
-
-    // Prevent AI returning incomplete or wrong format
-    if (!correctAnswer || incorrectOptions.length < 3) {
-      throw new Error("Invalid MCQ format received.");
-    }
-
-    options = [correctAnswer, ...incorrectOptions];
-
-    // Shuffle options
+    // Combine and shuffle options
+    options = [correctAnswer, ...incorrect];
     for (let i = options.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [options[i], options[j]] = [options[j], options[i]];
     }
 
-    explanation = content.match(/Explanation:\s*([\s\S]+)/)?.[1]?.trim() || "";
     answer = `Correct answer: ${correctAnswer}\n\n${explanation}`;
   } else {
     answer =
       content.match(/Answer:\s*([\s\S]+?)(\n*Explanation:|$)/s)?.[1]?.trim() ||
       "";
-    explanation = content.match(/Explanation:\s*([\s\S]+)/s)?.[1]?.trim() || "";
+    explanation =
+      content.match(/Explanation:\s*([\s\S]+)/s)?.[1]?.trim() ||
+      "This requires a detailed explanation with examples.";
   }
 
   return { question, answer, options, correctAnswer, explanation };
@@ -170,7 +164,15 @@ export async function generateAIQuestions(
           questions.push({
             ...baseQuestion,
             mcqData: {
-              options,
+              options:
+                options.length === 4
+                  ? options
+                  : [
+                      correctAnswer,
+                      "Incorrect option 1",
+                      "Incorrect option 2",
+                      "Incorrect option 3",
+                    ],
               correctAnswer,
               explanation: explanation || "No explanation provided",
             },
@@ -206,7 +208,100 @@ export async function generateAIQuestions(
 
   return questions;
 }
-function createFallbackQuestion(params: { difficulty: "EASY" | "MEDIUM" | "HARD" | "MIXED"; course: string; subject: string; university: string; subtopic: string; type: "MCQ" | "SHORT_ANSWER" | "LONG_ANSWER"; numQuestions: number; }, i: number): any {
-  throw new Error("Function not implemented.");
-}
 
+function createFallbackQuestion(params: any, index: number) {
+  // Create more meaningful fallback questions based on the subtopic
+  const getQuestionText = (subtopic: string, type: QuestionType) => {
+    const questionTypes = {
+      MCQ: [
+        `Which of the following best describes ${subtopic}?`,
+        `What is a key characteristic of ${subtopic}?`,
+        `Which statement about ${subtopic} is correct?`,
+        `In the context of ${subtopic}, which option is most accurate?`,
+      ],
+      SHORT_ANSWER: [
+        `Briefly explain the concept of ${subtopic}.`,
+        `Summarize the importance of ${subtopic} in 1-2 sentences.`,
+        `What are the main principles of ${subtopic}?`,
+        `Define ${subtopic} and give a short example.`,
+      ],
+      LONG_ANSWER: [
+        `Explain ${subtopic} in detail, including its applications and significance.`,
+        `Discuss the main concepts of ${subtopic} with relevant examples.`,
+        `Compare and contrast different approaches to understanding ${subtopic}.`,
+        `Analyze how ${subtopic} has evolved and its current relevance.`,
+      ],
+    };
+
+    // Select a question randomly from the appropriate type
+    const questions = questionTypes[type];
+    return questions[index % questions.length];
+  };
+
+  // Create more realistic options for MCQs
+  const getMCQOptions = (subtopic: string) => {
+    // These are generic but related to the subtopic
+    return {
+      options: [
+        `The primary function of ${subtopic}`,
+        `A secondary aspect of ${subtopic}`,
+        `A common misconception about ${subtopic}`,
+        `An alternative approach to ${subtopic}`,
+      ],
+      correctAnswer: `The primary function of ${subtopic}`,
+    };
+  };
+
+  // Create better sample answers
+  const getSampleAnswer = (subtopic: string, type: QuestionType) => {
+    if (type === "SHORT_ANSWER") {
+      return `${subtopic} refers to a fundamental concept that plays a critical role in this field. It is characterized by specific properties that distinguish it from related concepts.`;
+    } else {
+      return `${subtopic} is a comprehensive framework that encompasses several key principles. First, it involves understanding the core mechanisms that drive its functionality. Second, it requires analysis of how these mechanisms interact within broader systems.
+
+Examples of ${subtopic} can be found in various contexts, such as [specific example 1] and [specific example 2]. These examples demonstrate how ${subtopic} principles are applied in practical scenarios.
+
+The significance of ${subtopic} extends to multiple domains, including [related domain 1] and [related domain 2], where its application has led to important developments and innovations.`;
+    }
+  };
+
+  const base = {
+    id: `fallback-${Date.now()}-${index}`,
+    type: params.type,
+    difficulty: params.difficulty === "MIXED" ? "MEDIUM" : params.difficulty,
+    subjectId: "generated",
+    topic: params.subtopic,
+    text: getQuestionText(params.subtopic, params.type),
+  };
+
+  switch (params.type) {
+    case "MCQ":
+      const { options, correctAnswer } = getMCQOptions(params.subtopic);
+      return {
+        ...base,
+        mcqData: {
+          options,
+          correctAnswer,
+          explanation: `The correct answer refers to the primary and most essential characteristic of ${params.subtopic}. The other options, while related, either represent secondary aspects, common misunderstandings, or alternative approaches that don't fully capture the core concept.`,
+        },
+      };
+    case "SHORT_ANSWER":
+      return {
+        ...base,
+        shortAnswerData: {
+          sampleAnswer: getSampleAnswer(params.subtopic, "SHORT_ANSWER"),
+          explanation: `A good response should briefly define ${params.subtopic} and highlight its key characteristics or importance within the field. Concise explanations that demonstrate understanding of core principles are ideal.`,
+        },
+      };
+    case "LONG_ANSWER":
+      return {
+        ...base,
+        longAnswerData: {
+          sampleAnswer: getSampleAnswer(params.subtopic, "LONG_ANSWER"),
+          explanation: `A comprehensive answer should cover the fundamental aspects of ${params.subtopic}, provide relevant examples, analyze its significance, and potentially discuss related concepts or applications. Critical thinking and synthesis of information are important.`,
+        },
+      };
+    default:
+      return base;
+  }
+}
