@@ -195,6 +195,7 @@ enum Difficulty {
   EASY
   MEDIUM
   HARD
+  MIXED
 }
 
 model PastPaper {
