@@ -5,19 +5,12 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface AnimatedButtonProps {
-  children: React.ReactNode;
-  className?: string;
-  variant?: "default" | "link" | "outline" | "destructive" | "secondary" | "ghost" | null;
-  [key: string]: any;
-}
-
 export function AnimatedButton({
   children,
   className,
   variant = "default",
   ...props
-}: AnimatedButtonProps) {
+}) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (

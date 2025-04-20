@@ -61,10 +61,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { AIAnswerGenerator } from "@/components/shared/a
+import { AIAnswerGenerator } from "@/components/shared/ai-answer-generator";
+import { KnowledgeGlobe } from "@/components/shared/knowledge-globe";
 import { AnimatedButton } from "@/components/shared/animated-button";
 import { PageHeader } from "@/components/shared/page-header";
-import { ProgressChart } from "@/components/progress-chart";
+import { ProgressChart } from "@/components/shared/progress-chart";
 import Link from "next/link";
 
 export default function ExamPreparationPage() {
@@ -95,10 +96,25 @@ export default function ExamPreparationPage() {
   const isProgressInView = useInView(progressRef, { once: true });
 
   // Sample chapters data - would be fetched based on subject selection
-  const [chapters, setChapters] = useState([]);
+  const [chapters, setChapters] = useState<{ id: string; name: string; subject: string; progress: number }[]>([]);
 
   // Sample questions data - would be fetched based on chapter selection
-  const [questions, setQuestions] = useState([]);
+  type Question = 
+    | {
+        id: string;
+        type: "mcq";
+        text: string;
+        options: { id: string; text: string; isCorrect: boolean }[];
+        explanation: string;
+      }
+    | {
+        id: string;
+        type: "short-answer" | "long-answer";
+        text: string;
+        modelAnswer: string;
+      };
+  
+  const [questions, setQuestions] = useState<Question[]>([]);
 
   useEffect(() => {
     // Simulate loading data
@@ -173,7 +189,7 @@ export default function ExamPreparationPage() {
   useEffect(() => {
     if (selectedChapter) {
       // Simulate fetching questions for the selected chapter
-      const fetchedQuestions = [
+      const fetchedQuestions: Question[] = [
         {
           id: "q1",
           type: "mcq",
@@ -227,11 +243,11 @@ export default function ExamPreparationPage() {
     }
   }, [selectedChapter]);
 
-  const handleSelectChapter = (chapterId) => {
+  const handleSelectChapter = (chapterId: string) => {
     setSelectedChapter(chapterId);
   };
 
-  const handleGenerateAnswer = (questionText) => {
+  const handleGenerateAnswer = (questionText: string) => {
     setCurrentQuestion(questionText);
     setShowAIGenerator(true);
   };
@@ -416,6 +432,7 @@ export default function ExamPreparationPage() {
             }}
           />
         ))}
+
       </div>
     );
   };
@@ -914,7 +931,7 @@ export default function ExamPreparationPage() {
                                 ) : (
                                   <p className="font-medium">
                                     {currentQuestionData?.text ||
-                                      "No question available for this chapter."}
+                                      "No question available for this"}
                                   </p>
                                 )}
                               </div>
@@ -926,8 +943,8 @@ export default function ExamPreparationPage() {
                                   onValueChange={setSelectedAnswer}
                                   className="space-y-3"
                                   disabled={answerSubmitted}
-                                >
-                                  {currentQuestionData.options.map((option) => (
+                                  {currentQuestionData.type === "mcq" &&
+                                    currentQuestionData.options.map((option: { id: string; text: string; isCorrect: boolean }) => (
                                     <div
                                       key={option.id}
                                       className={`flex items-center space-x-2 p-3 rounded-lg border ${
