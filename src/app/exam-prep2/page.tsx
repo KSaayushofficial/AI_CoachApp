@@ -61,11 +61,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { AIAnswerGenerator } from "@/components/shared/ai-answer-generator";
-import { KnowledgeGlobe } from "@/components/shared/knowledge-globe";
-import { AnimatedButton } from "@/components/shared/animated-button";
-import { PageHeader } from "@/components/shared/page-header";
-import { ProgressChart } from "@/components/shared/progress-chart";
+import { AIAnswerGenerator } from "@/components/ai-answer-generator";
+import { KnowledgeGlobe } from "@/components/knowledge-globe";
+import { AnimatedButton } from "@/components/animated-button";
+import { PageHeader } from "@/components/page-header";
+import { ProgressChart } from "@/components/progress-chart";
 import Link from "next/link";
 
 export default function ExamPreparationPage() {
@@ -96,25 +96,10 @@ export default function ExamPreparationPage() {
   const isProgressInView = useInView(progressRef, { once: true });
 
   // Sample chapters data - would be fetched based on subject selection
-  const [chapters, setChapters] = useState<{ id: string; name: string; subject: string; progress: number }[]>([]);
+  const [chapters, setChapters] = useState([]);
 
   // Sample questions data - would be fetched based on chapter selection
-  type Question = 
-    | {
-        id: string;
-        type: "mcq";
-        text: string;
-        options: { id: string; text: string; isCorrect: boolean }[];
-        explanation: string;
-      }
-    | {
-        id: string;
-        type: "short-answer" | "long-answer";
-        text: string;
-        modelAnswer: string;
-      };
-  
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState([]);
 
   useEffect(() => {
     // Simulate loading data
@@ -189,7 +174,7 @@ export default function ExamPreparationPage() {
   useEffect(() => {
     if (selectedChapter) {
       // Simulate fetching questions for the selected chapter
-      const fetchedQuestions: Question[] = [
+      const fetchedQuestions = [
         {
           id: "q1",
           type: "mcq",
@@ -243,11 +228,11 @@ export default function ExamPreparationPage() {
     }
   }, [selectedChapter]);
 
-  const handleSelectChapter = (chapterId: string) => {
+  const handleSelectChapter = (chapterId) => {
     setSelectedChapter(chapterId);
   };
 
-  const handleGenerateAnswer = (questionText: string) => {
+  const handleGenerateAnswer = (questionText) => {
     setCurrentQuestion(questionText);
     setShowAIGenerator(true);
   };
@@ -432,7 +417,6 @@ export default function ExamPreparationPage() {
             }}
           />
         ))}
-
       </div>
     );
   };
@@ -931,7 +915,7 @@ export default function ExamPreparationPage() {
                                 ) : (
                                   <p className="font-medium">
                                     {currentQuestionData?.text ||
-                                      "No question available for this"}
+                                      "No question available for this chapter."}
                                   </p>
                                 )}
                               </div>
@@ -943,8 +927,8 @@ export default function ExamPreparationPage() {
                                   onValueChange={setSelectedAnswer}
                                   className="space-y-3"
                                   disabled={answerSubmitted}
-                                  {currentQuestionData.type === "mcq" &&
-                                    currentQuestionData.options.map((option: { id: string; text: string; isCorrect: boolean }) => (
+                                >
+                                  {currentQuestionData.options.map((option) => (
                                     <div
                                       key={option.id}
                                       className={`flex items-center space-x-2 p-3 rounded-lg border ${
@@ -1076,7 +1060,7 @@ export default function ExamPreparationPage() {
                                 <AnimatedButton
                                   onClick={() =>
                                     handleGenerateAnswer(
-                                      currentQuestionData.text
+                                      currentQuestionData?.text || "No question available for this chapter."
                                     )
                                   }
                                   className="w-full"
