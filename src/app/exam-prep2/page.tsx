@@ -140,7 +140,7 @@ export default function ExamPreparationPage() {
         },
         {
           id: "ch5",
-          name: "Chapter 5: Abstraction",
+          name: "Chapter 5: Abstaractin",
           subject: "OOP in Java",
           progress: 30,
         },
