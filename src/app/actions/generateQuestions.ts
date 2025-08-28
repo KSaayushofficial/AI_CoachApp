@@ -1,22 +1,34 @@
 "use server";
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { QuestionType, Difficulty } from "@prisma/client";
 import { checkUser } from "@/lib/checkUser";
 
+// Enhanced validation schema
 const QuestionGenerationParamsSchema = z.object({
-  course: z.string().min(1),
-  university: z.string().min(1),
-  subject: z.string().min(1),
+  course: z.string().min(1, "Course name is required"),
+  university: z.string().min(1, "University name is required"),
+  subject: z.string().min(1, "Subject is required"),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD", "MIXED"]),
   numQuestions: z.number().min(1).max(20),
-  subtopic: z.string().min(1),
+  subtopic: z.string().min(1, "Subtopic is required"),
   type: z.enum(["MCQ", "SHORT_ANSWER", "LONG_ANSWER"]),
 });
 
-const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+// Initialize Gemini AI with better error handling
+let geminiAI: GoogleGenerativeAI | null = null;
+try {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured");
+  }
+  geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+} catch (error) {
+  console.error("Failed to initialize Gemini AI:", error);
+}
 
+// Improved prompt generator
 const getStructuredPrompt = (
   subtopic: string,
   type: QuestionType,
@@ -25,20 +37,22 @@ const getStructuredPrompt = (
 ): string => {
   const typeSpecific = {
     MCQ: `Generate a unique multiple-choice question about ${subtopic}.
+- Difficulty: ${difficulty}
 - Provide 1 correct answer and 3 plausible but incorrect options
 - Format response as:
 Question: [question text]
 Correct: [correct answer]
 Incorrect: [comma-separated incorrect options]
-Explanation: [brief explanation]
-- Jumble the answer options so correct answer isn't always first`,
+Explanation: [brief explanation]`,
     SHORT_ANSWER: `Generate a unique short-answer question about ${subtopic}.
+- Difficulty: ${difficulty}
 - Answer should be 1-2 sentences
 - Format response as:
 Question: [question text]
 Answer: [concise answer]
 Explanation: [brief explanation]`,
     LONG_ANSWER: `Generate a unique long-answer question about ${subtopic}.
+- Difficulty: ${difficulty}
 - Answer should be detailed with examples
 - Format response as:
 Question: [question text]
@@ -51,257 +65,282 @@ Explanation: [additional context if needed]`,
       ? `\n\nAvoid these questions:\n${existingQuestions.join("\n")}`
       : "";
 
-  return `${typeSpecific[type]}
-Difficulty: ${difficulty}${uniqueness}
-Ensure all answers are accurate and options are plausible.`;
+  return `${typeSpecific[type]}${uniqueness}`;
 };
 
+// More robust response parser
 const parseResponse = (content: string, type: QuestionType) => {
-  content = content.trim();
+  if (!content) throw new Error("Empty response content");
+
   const question =
-    content.match(/Question:\s*(.+?)(\n|$)/)?.[1] || content.split("\n")[0];
-  let answer = "",
-    options: string[] = [],
-    correctAnswer = "",
-    explanation = "";
+    content.match(/Question:\s*(.+?)(\n|$)/)?.[1]?.trim() ||
+    content.split("\n")[0]?.trim() ||
+    "Could not parse question";
 
-  if (type === "MCQ") {
-    correctAnswer = content.match(/Correct:\s*(.+?)(\n|$)/)?.[1] || "";
-    const incorrect =
-      content
-        .match(/Incorrect:\s*(.+?)(\n|$)/)?.[1]
-        ?.split(",")
-        .map((s) => s.trim()) || [];
-    explanation = content.match(/Explanation:\s*([\s\S]+)/)?.[1] || "";
+  let answer = "";
+  let options: string[] = [];
+  let correctAnswer = "";
+  let explanation = "";
 
-    // Combine and shuffle options
-    options = [correctAnswer, ...incorrect];
-    for (let i = options.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [options[i], options[j]] = [options[j], options[i]];
-    }
+  switch (type) {
+    case "MCQ":
+      correctAnswer =
+        content.match(/Correct:\s*(.+?)(\n|$)/)?.[1]?.trim() || "";
+      const incorrect =
+        content
+          .match(/Incorrect:\s*(.+?)(\n|$)/)?.[1]
+          ?.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean) || [];
 
-    answer = `Correct answer: ${correctAnswer}\n\n${explanation}`;
-  } else {
-    answer =
-      content.match(/Answer:\s*([\s\S]+?)(\n*Explanation:|$)/s)?.[1]?.trim() ||
-      "";
-    explanation =
-      content.match(/Explanation:\s*([\s\S]+)/s)?.[1]?.trim() ||
-      "This requires a detailed explanation with examples.";
+      explanation =
+        content.match(/Explanation:\s*([\s\S]+)/)?.[1]?.trim() ||
+        "No explanation provided";
+
+      options = [correctAnswer, ...incorrect]
+        .filter(Boolean)
+        .sort(() => Math.random() - 0.5); // Better shuffling
+
+      answer = `Correct answer: ${correctAnswer}\n\n${explanation}`;
+      break;
+
+    default:
+      answer =
+        content
+          .match(/Answer:\s*([\s\S]+?)(\n*Explanation:|$)/s)?.[1]
+          ?.trim() || "No answer generated";
+      explanation =
+        content.match(/Explanation:\s*([\s\S]+)/s)?.[1]?.trim() ||
+        "No explanation provided";
   }
 
   return { question, answer, options, correctAnswer, explanation };
 };
 
-export async function generateAIQuestions(
-  params: z.infer<typeof QuestionGenerationParamsSchema>
+// Enhanced fallback question generator
+async function createFallbackQuestion(
+  params: z.infer<typeof QuestionGenerationParamsSchema>,
+  index: number
 ) {
-  const user = await checkUser();
-  if (!user) throw new Error("User authentication failed");
-
-  const validatedParams = QuestionGenerationParamsSchema.parse(params);
-  const questions = [];
-  const model = geminiAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  const existingQuestions: string[] = [];
-
-  for (let i = 0; i < params.numQuestions; i++) {
+  const getSubjectId = async () => {
     try {
-      const prompt = getStructuredPrompt(
-        params.subtopic,
-        params.type,
-        params.difficulty === "MIXED"
-          ? ["EASY", "MEDIUM", "HARD"][Math.floor(Math.random() * 3)]
-          : params.difficulty.toLowerCase(),
-        existingQuestions
-      );
-
-      const result = await model.generateContent(prompt);
-      const content = result.response.text();
-      const { question, answer, options, correctAnswer, explanation } =
-        parseResponse(content, params.type);
-
-      if (
-        !question ||
-        (params.type === "MCQ" && (!correctAnswer || options.length < 2))
-      ) {
-        throw new Error("Invalid question format received from AI");
-      }
-
-      existingQuestions.push(question);
-
-      const dbQuestion = await db.generatedQuestion.create({
-        data: {
-          userId: user.id,
-          questionText: question,
-          answerText: answer,
-          questionType: params.type,
-          difficulty:
-            params.difficulty === "MIXED"
-              ? (["EASY", "MEDIUM", "HARD"][
-                  Math.floor(Math.random() * 3)
-                ] as Difficulty)
-              : (params.difficulty as Difficulty),
-          course: params.course,
-          subject: params.subject,
-          university: params.university,
-          subtopic: params.subtopic,
-          formatType: "DEFAULT",
-        },
+      const subject = await db.subject.findFirst({
+        where: { name: params.subject },
+        select: { id: true },
       });
-
-      const baseQuestion = {
-        id: dbQuestion.id,
-        type: params.type,
-        text: question,
-        difficulty: params.difficulty,
-        subjectId: "generated",
-        topic: params.subtopic,
-      };
-
-      switch (params.type) {
-        case "MCQ":
-          questions.push({
-            ...baseQuestion,
-            mcqData: {
-              options:
-                options.length === 4
-                  ? options
-                  : [
-                      correctAnswer,
-                      "Incorrect option 1",
-                      "Incorrect option 2",
-                      "Incorrect option 3",
-                    ],
-              correctAnswer,
-              explanation: explanation || "No explanation provided",
-            },
-          });
-          break;
-        case "SHORT_ANSWER":
-          questions.push({
-            ...baseQuestion,
-            shortAnswerData: {
-              sampleAnswer: answer || "Sample answer not generated",
-              explanation:
-                explanation || "This requires a concise 1-2 sentence response.",
-            },
-          });
-          break;
-        case "LONG_ANSWER":
-          questions.push({
-            ...baseQuestion,
-            longAnswerData: {
-              sampleAnswer: answer || "Detailed answer not generated",
-              explanation:
-                explanation ||
-                "This requires a comprehensive explanation with examples.",
-            },
-          });
-          break;
-      }
-    } catch (error) {
-      console.error(`Error generating question ${i + 1}:`, error);
-      questions.push(createFallbackQuestion(params, i));
-    }
-  }
-
-  return questions;
-}
-
-function createFallbackQuestion(params: any, index: number) {
-  // Create more meaningful fallback questions based on the subtopic
-  const getQuestionText = (subtopic: string, type: QuestionType) => {
-    const questionTypes = {
-      MCQ: [
-        `Which of the following best describes ${subtopic}?`,
-        `What is a key characteristic of ${subtopic}?`,
-        `Which statement about ${subtopic} is correct?`,
-        `In the context of ${subtopic}, which option is most accurate?`,
-      ],
-      SHORT_ANSWER: [
-        `Briefly explain the concept of ${subtopic}.`,
-        `Summarize the importance of ${subtopic} in 1-2 sentences.`,
-        `What are the main principles of ${subtopic}?`,
-        `Define ${subtopic} and give a short example.`,
-      ],
-      LONG_ANSWER: [
-        `Explain ${subtopic} in detail, including its applications and significance.`,
-        `Discuss the main concepts of ${subtopic} with relevant examples.`,
-        `Compare and contrast different approaches to understanding ${subtopic}.`,
-        `Analyze how ${subtopic} has evolved and its current relevance.`,
-      ],
-    };
-
-    // Select a question randomly from the appropriate type
-    const questions = questionTypes[type];
-    return questions[index % questions.length];
-  };
-
-  // Create more realistic options for MCQs
-  const getMCQOptions = (subtopic: string) => {
-    // These are generic but related to the subtopic
-    return {
-      options: [
-        `The primary function of ${subtopic}`,
-        `A secondary aspect of ${subtopic}`,
-        `A common misconception about ${subtopic}`,
-        `An alternative approach to ${subtopic}`,
-      ],
-      correctAnswer: `The primary function of ${subtopic}`,
-    };
-  };
-
-  // Create better sample answers
-  const getSampleAnswer = (subtopic: string, type: QuestionType) => {
-    if (type === "SHORT_ANSWER") {
-      return `${subtopic} refers to a fundamental concept that plays a critical role in this field. It is characterized by specific properties that distinguish it from related concepts.`;
-    } else {
-      return `${subtopic} is a comprehensive framework that encompasses several key principles. First, it involves understanding the core mechanisms that drive its functionality. Second, it requires analysis of how these mechanisms interact within broader systems.
-
-Examples of ${subtopic} can be found in various contexts, such as [specific example 1] and [specific example 2]. These examples demonstrate how ${subtopic} principles are applied in practical scenarios.
-
-The significance of ${subtopic} extends to multiple domains, including [related domain 1] and [related domain 2], where its application has led to important developments and innovations.`;
+      return subject?.id || null;
+    } catch {
+      return null;
     }
   };
 
-  const base = {
+  const subjectId = await getSubjectId();
+  const baseQuestion = {
     id: `fallback-${Date.now()}-${index}`,
     type: params.type,
     difficulty: params.difficulty === "MIXED" ? "MEDIUM" : params.difficulty,
-    subjectId: "generated",
+    subjectId,
     topic: params.subtopic,
-    text: getQuestionText(params.subtopic, params.type),
+    text: "",
   };
+
+  const questionTexts = {
+    MCQ: `Which of the following best describes ${params.subtopic}?`,
+    SHORT_ANSWER: `Explain ${params.subtopic} briefly.`,
+    LONG_ANSWER: `Discuss ${params.subtopic} in detail.`,
+  };
+
+  baseQuestion.text = questionTexts[params.type] || questionTexts.SHORT_ANSWER;
 
   switch (params.type) {
     case "MCQ":
-      const { options, correctAnswer } = getMCQOptions(params.subtopic);
       return {
-        ...base,
+        ...baseQuestion,
         mcqData: {
-          options,
-          correctAnswer,
-          explanation: `The correct answer refers to the primary and most essential characteristic of ${params.subtopic}. The other options, while related, either represent secondary aspects, common misunderstandings, or alternative approaches that don't fully capture the core concept.`,
+          options: [
+            "Correct answer (example)",
+            "Incorrect option 1",
+            "Incorrect option 2",
+            "Incorrect option 3",
+          ],
+          correctAnswer: "Correct answer (example)",
+          explanation: `This is a fallback question about ${params.subtopic}`,
         },
       };
     case "SHORT_ANSWER":
       return {
-        ...base,
+        ...baseQuestion,
         shortAnswerData: {
-          sampleAnswer: getSampleAnswer(params.subtopic, "SHORT_ANSWER"),
-          explanation: `A good response should briefly define ${params.subtopic} and highlight its key characteristics or importance within the field. Concise explanations that demonstrate understanding of core principles are ideal.`,
+          sampleAnswer: `Sample answer about ${params.subtopic}`,
+          explanation: "This is a fallback question",
         },
       };
     case "LONG_ANSWER":
       return {
-        ...base,
+        ...baseQuestion,
         longAnswerData: {
-          sampleAnswer: getSampleAnswer(params.subtopic, "LONG_ANSWER"),
-          explanation: `A comprehensive answer should cover the fundamental aspects of ${params.subtopic}, provide relevant examples, analyze its significance, and potentially discuss related concepts or applications. Critical thinking and synthesis of information are important.`,
+          sampleAnswer: `Detailed explanation about ${params.subtopic}`,
+          explanation: "This is a fallback question",
         },
       };
     default:
-      return base;
+      return baseQuestion;
+  }
+}
+
+// Main function with comprehensive error handling
+export async function generateAIQuestions(
+  params: z.infer<typeof QuestionGenerationParamsSchema>
+) {
+  try {
+    // Authentication check
+    const user = await checkUser();
+    if (!user) throw new Error("User authentication failed");
+    if (!geminiAI) throw new Error("Gemini AI service is unavailable");
+
+    // Input validation
+    const validatedParams = QuestionGenerationParamsSchema.parse(params);
+    if (!validatedParams.subtopic.trim()) {
+      throw new Error("Subtopic cannot be empty");
+    }
+
+    const questions = [];
+    const model = geminiAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const existingQuestions: string[] = [];
+
+    for (let i = 0; i < validatedParams.numQuestions; i++) {
+      try {
+        // Rate limiting
+        if (i > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        const difficulty =
+          validatedParams.difficulty === "MIXED"
+            ? ["EASY", "MEDIUM", "HARD"][Math.floor(Math.random() * 3)]
+            : validatedParams.difficulty.toLowerCase();
+
+        const prompt = getStructuredPrompt(
+          validatedParams.subtopic,
+          validatedParams.type,
+          difficulty,
+          existingQuestions
+        );
+
+        // API call with error handling
+        const result = await model.generateContent(prompt);
+        if (!result.response) throw new Error("Empty API response");
+
+        const content = result.response.text();
+        const { question, answer, options, correctAnswer, explanation } =
+          parseResponse(content, validatedParams.type);
+
+        // Validate parsed content
+        if (
+          !question ||
+          (validatedParams.type === "MCQ" &&
+            (!correctAnswer || options.length < 2))
+        ) {
+          throw new Error("Invalid question format received");
+        }
+
+        existingQuestions.push(question);
+
+        // Database operation with error handling
+        const dbQuestion = await db.generatedQuestion.create({
+          data: {
+            userId: user.id,
+            questionText: question,
+            answerText: answer,
+            questionType: validatedParams.type,
+            difficulty:
+              validatedParams.difficulty === "MIXED"
+                ? (["EASY", "MEDIUM", "HARD"][
+                    Math.floor(Math.random() * 3)
+                  ] as Difficulty)
+                : (validatedParams.difficulty as Difficulty),
+            course: validatedParams.course,
+            subject: validatedParams.subject,
+            university: validatedParams.university,
+            subtopic: validatedParams.subtopic,
+            formatType: "DEFAULT",
+          },
+        });
+
+        // Format response
+        const formattedQuestion = {
+          id: dbQuestion.id,
+          type: validatedParams.type,
+          text: question,
+          difficulty: validatedParams.difficulty,
+          subjectId: "generated",
+          topic: validatedParams.subtopic,
+        };
+
+        switch (validatedParams.type) {
+          case "MCQ":
+            questions.push({
+              ...formattedQuestion,
+              mcqData: {
+                options:
+                  options.length === 4
+                    ? options
+                    : [
+                        correctAnswer,
+                        "Incorrect option 1",
+                        "Incorrect option 2",
+                        "Incorrect option 3",
+                      ],
+                correctAnswer,
+                explanation,
+              },
+            });
+            break;
+          case "SHORT_ANSWER":
+            questions.push({
+              ...formattedQuestion,
+              shortAnswerData: {
+                sampleAnswer: answer,
+                explanation,
+              },
+            });
+            break;
+          case "LONG_ANSWER":
+            questions.push({
+              ...formattedQuestion,
+              longAnswerData: {
+                sampleAnswer: answer,
+                explanation,
+              },
+            });
+            break;
+        }
+      } catch (error) {
+        console.error(`Error generating question ${i + 1}:`, error);
+        questions.push(await createFallbackQuestion(validatedParams, i));
+      }
+    }
+
+    return questions;
+  } catch (error) {
+    console.error("Critical error in generateAIQuestions:", error);
+    // Return fallback questions if complete failure
+    const fallbacks = [];
+    const numQuestions = params?.numQuestions || 3;
+    for (let i = 0; i < numQuestions; i++) {
+      fallbacks.push(
+        await createFallbackQuestion(
+          params || {
+            course: "General",
+            university: "Unknown",
+            subject: "General",
+            difficulty: "MEDIUM",
+            numQuestions: 3,
+            subtopic: "general topic",
+            type: "MCQ",
+          },
+          i
+        )
+      );
+    }
+    return fallbacks;
   }
 }

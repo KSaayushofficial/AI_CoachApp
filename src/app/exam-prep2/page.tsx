@@ -61,11 +61,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { AIAnswerGenerator } from "@/components/ai-answer-generator";
-import { KnowledgeGlobe } from "@/components/knowledge-globe";
-import { AnimatedButton } from "@/components/animated-button";
-import { PageHeader } from "@/components/page-header";
-import { ProgressChart } from "@/components/progress-chart";
+import { AIAnswerGenerator } from "@/components/shared/ai-answer-generator";
+import { KnowledgeGlobe } from "@/components/shared/knowledge-globe";
+import { AnimatedButton } from "@/components/shared/animated-button";
+import { PageHeader } from "@/components/shared/page-header";
+import { ProgressChart } from "@/components/shared/progress-chart";
 import Link from "next/link";
 
 export default function ExamPreparationPage() {
@@ -75,6 +75,7 @@ export default function ExamPreparationPage() {
   const [course, setCourse] = useState("");
   const [subject, setSubject] = useState("");
   const [selectedChapter, setSelectedChapter] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState("");
   const [activeTab, setActiveTab] = useState("mcq");
   const [showAIGenerator, setShowAIGenerator] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState("");
@@ -97,9 +98,139 @@ export default function ExamPreparationPage() {
 
   // Sample chapters data - would be fetched based on subject selection
   const [chapters, setChapters] = useState([]);
+  const [topics, setTopics] = useState([]);
 
   // Sample questions data - would be fetched based on chapter selection
   const [questions, setQuestions] = useState([]);
+
+  // Subject data with chapters and topics
+  const subjectData = {
+    "data-structures": {
+      name: "Data Structures",
+      chapters: [
+        {
+          id: "ds-ch1",
+          name: "Chapter 1: Introduction to Data Structures",
+          topics: [
+            { id: "ds-t1", name: "What are Data Structures?" },
+            { id: "ds-t2", name: "Types of Data Structures" },
+            { id: "ds-t3", name: "Time and Space Complexity" },
+          ],
+        },
+        {
+          id: "ds-ch2",
+          name: "Chapter 2: Arrays and Linked Lists",
+          topics: [
+            { id: "ds-t4", name: "Arrays: Definition and Operations" },
+            { id: "ds-t5", name: "Singly Linked Lists" },
+            { id: "ds-t6", name: "Doubly Linked Lists" },
+          ],
+        },
+        {
+          id: "ds-ch3",
+          name: "Chapter 3: Stacks and Queues",
+          topics: [
+            { id: "ds-t7", name: "Stack: Definition and Implementation" },
+            { id: "ds-t8", name: "Queue: Definition and Implementation" },
+            { id: "ds-t9", name: "Applications of Stacks and Queues" },
+          ],
+        },
+        {
+          id: "ds-ch4",
+          name: "Chapter 4: Trees",
+          topics: [
+            { id: "ds-t10", name: "Binary Trees" },
+            { id: "ds-t11", name: "Binary Search Trees" },
+            { id: "ds-t12", name: "AVL Trees" },
+            { id: "ds-t13", name: "Heap: Definition, Types, Usage, Algorithm" },
+          ],
+        },
+        {
+          id: "ds-ch5",
+          name: "Chapter 5: Graphs",
+          topics: [
+            { id: "ds-t14", name: "Graph Representation" },
+            { id: "ds-t15", name: "Graph Traversal Algorithms" },
+            { id: "ds-t16", name: "Shortest Path Algorithms" },
+          ],
+        },
+        {
+          id: "ds-ch6",
+          name: "Chapter 6: Sorting and Searching",
+          topics: [
+            { id: "ds-t17", name: "Bubble, Selection, Insertion Sort" },
+            { id: "ds-t18", name: "Merge, Quick, Heap Sort" },
+            { id: "ds-t19", name: "Linear and Binary Search" },
+          ],
+        },
+      ],
+    },
+    "c-programming": {
+      name: "C Programming",
+      chapters: [
+        {
+          id: "c-ch1",
+          name: "Chapter 1: Introduction to C",
+          topics: [
+            { id: "c-t1", name: "History of C" },
+            { id: "c-t2", name: "Basic Structure of C Program" },
+            { id: "c-t3", name: "Data Types in C" },
+          ],
+        },
+        {
+          id: "c-ch2",
+          name: "Chapter 2: Control Structures",
+          topics: [
+            { id: "c-t4", name: "If-else Statements" },
+            { id: "c-t5", name: "Loops in C" },
+            { id: "c-t6", name: "Switch Case" },
+          ],
+        },
+        {
+          id: "c-ch3",
+          name: "Chapter 3: Functions and Arrays",
+          topics: [
+            { id: "c-t7", name: "Functions in C" },
+            { id: "c-t8", name: "Arrays in C" },
+            { id: "c-t9", name: "Strings in C" },
+          ],
+        },
+        {
+          id: "c-ch4",
+          name: "Chapter 4: Pointers",
+          topics: [
+            { id: "c-t10", name: "Introduction to Pointers" },
+            { id: "c-t11", name: "Pointer Arithmetic" },
+            { id: "c-t12", name: "Pointers and Arrays" },
+          ],
+        },
+        {
+          id: "c-ch5",
+          name: "Chapter 5: Structures and File Handling",
+          topics: [
+            { id: "c-t13", name: "Structures and Unions" },
+            { id: "c-t14", name: "File I/O in C" },
+            { id: "c-t15", name: "Dynamic Memory Allocation" },
+          ],
+        },
+      ],
+    },
+    "oop-java": {
+      name: "OOP in Java",
+      chapters: [
+        {
+          id: "oop-ch1",
+          name: "Chapter 1: Introduction to OOP",
+          topics: [
+            { id: "oop-t1", name: "OOP Concepts" },
+            { id: "oop-t2", name: "Classes and Objects" },
+            { id: "oop-t3", name: "Constructors" },
+          ],
+        },
+        // ... other chapters for OOP in Java
+      ],
+    },
+  };
 
   useEffect(() => {
     // Simulate loading data
@@ -111,68 +242,33 @@ export default function ExamPreparationPage() {
 
   // Handle subject selection
   useEffect(() => {
-    if (subject) {
-      // Simulate fetching chapters for the selected subject
-      const fetchedChapters = [
-        {
-          id: "ch1",
-          name: "Chapter 1: Introduction to OOP",
-          subject: "OOP in Java",
-          progress: 85,
-        },
-        {
-          id: "ch2",
-          name: "Chapter 2: Classes and Objects",
-          subject: "OOP in Java",
-          progress: 70,
-        },
-        {
-          id: "ch3",
-          name: "Chapter 3: Inheritance",
-          subject: "OOP in Java",
-          progress: 60,
-        },
-        {
-          id: "ch4",
-          name: "Chapter 4: Polymorphism",
-          subject: "OOP in Java",
-          progress: 45,
-        },
-        {
-          id: "ch5",
-          name: "Chapter 5: Abstaractin",
-          subject: "OOP in Java",
-          progress: 30,
-        },
-        {
-          id: "ch6",
-          name: "Chapter 6: Encapsulation",
-          subject: "OOP in Java",
-          progress: 20,
-        },
-        {
-          id: "ch7",
-          name: "Chapter 7: Interfaces",
-          subject: "OOP in Java",
-          progress: 10,
-        },
-        {
-          id: "ch8",
-          name: "Chapter 8: Exception Handling",
-          subject: "OOP in Java",
-          progress: 5,
-        },
-      ];
+    if (subject && subjectData[subject]) {
+      const subjectInfo = subjectData[subject];
+      const fetchedChapters = subjectInfo.chapters.map((chapter) => ({
+        ...chapter,
+        subject: subjectInfo.name,
+        progress: Math.floor(Math.random() * 100), // Random progress for demo
+      }));
+
       setChapters(fetchedChapters);
       setSelectedChapter(""); // Reset selected chapter
+      setSelectedTopic(""); // Reset selected topic
     } else {
       setChapters([]);
+      setTopics([]);
     }
   }, [subject]);
 
   // Handle chapter selection
   useEffect(() => {
     if (selectedChapter) {
+      const chapter = chapters.find((ch) => ch.id === selectedChapter);
+      if (chapter && chapter.topics) {
+        setTopics(chapter.topics);
+      } else {
+        setTopics([]);
+      }
+
       // Simulate fetching questions for the selected chapter
       const fetchedQuestions = [
         {
@@ -216,7 +312,7 @@ export default function ExamPreparationPage() {
           type: "long-answer",
           text: "Discuss the principles of object-oriented programming (OOP) in Java. Explain each principle with appropriate examples and describe how they contribute to building robust and maintainable software.",
           modelAnswer:
-            'Object-Oriented Programming (OOP) is a programming paradigm based on the concept of "objects" that contain data and code. Java is a class-based, object-oriented programming language that implements OOP concepts. The four main principles of OOP in Java are:\n\n1. Encapsulation\nEncapsulation is the mechanism of hiding the internal state and requiring all interaction to be performed through an object\'s methods. It protects the integrity of an object\'s data by preventing direct access from outside the class.\n\nExample:\n```java\npublic class BankAccount {\n  private double balance; // private field\n\n  public double getBalance() {\n    return balance;\n  }\n\n  public void deposit(double amount) {\n    if (amount > 0) {\n      balance += amount;\n    }\n  }\n\n  public boolean withdraw(double amount) {\n    if (amount > 0 && balance >= amount) {\n      balance -= amount;\n      return true;\n    }\n    return false;\n  }\n}\n```\n\nIn this example, the `balance` field is private and can only be accessed through the public methods `getBalance()`, `deposit()`, and `withdraw()`. This ensures that the balance can never be set to an invalid value.\n\n2. Inheritance\nInheritance is the mechanism by which one class can inherit the fields and methods of another class. It promotes code reuse and establishes a relationship between a parent class and its child classes.\n\nExample:\n```java\n// Parent class\npublic class Vehicle {\n  protected String brand;\n\n  public Vehicle(String brand) {\n    this.brand = brand;\n  }\n\n  public void start() {\n    System.out.println("Vehicle starting");\n  }\n}\n\n// Child class\npublic class Car extends Vehicle {\n  private int numDoors;\n\n  public Car(String brand, int numDoors) {\n    super(brand); // Call parent constructor\n    this.numDoors = numDoors;\n  }\n\n  @Override\n  public void start() {\n    System.out.println(brand + " car starting with " + numDoors + " doors");\n  }\n}\n```\n\nHere, `Car` inherits from `Vehicle` and reuses its `brand` field while adding its own `numDoors` field. It also overrides the `start()` method to provide specific behavior.\n\n3. Polymorphism\nPolymorphism allows objects of different classes to be treated as objects of a common superclass. It enables a single interface to represent different underlying forms (data types).\n\nExample:\n```java\npublic class VehicleDemo {\n  public static void main(String[] args) {\n    // Array of Vehicle references\n    Vehicle[] vehicles = new Vehicle[2];\n    vehicles[0] = new Car("Toyota", 4);      // Car object\n    vehicles[1] = new Motorcycle("Honda");   // Motorcycle object\n    \n    // Polymorphic behavior\n    for (Vehicle vehicle : vehicles) {\n      vehicle.start(); // Calls the appropriate start() method\n    }\n  }\n}\n```\n\nIn this example, both `Car` and `Motorcycle` objects are treated as `Vehicle` objects. When `start()` is called, the appropriate method is executed based on the actual object type, demonstrating polymorphism.\n\n4. Abstraction\nAbstraction is the concept of hiding complex implementation details and showing only the necessary features of an object. It helps in reducing programming complexity and effort.\n\nExample:\n```java\n// Abstract class\npublic abstract class Shape {\n  abstract double calculateArea(); // Abstract method\n\n  public void display() {\n    System.out.println("Area: " + calculateArea());\n  }\n}\n\n// Concrete implementation\npublic class Circle extends Shape {\n  private double radius;\n\n  public Circle(double radius) {\n    this.radius = radius;\n  }\n\n  @Override\n  double calculateArea() {\n    return Math.PI * radius * radius;\n  }\n}\n```\n\nHere, `Shape` is an abstract class that defines a common interface for all shapes. The `calculateArea()` method is abstract, forcing subclasses to provide their own implementation. The `Circle` class extends `Shape` and implements the abstract method.\n\nContribution to Robust and Maintainable Software:\nThese OOP principles contribute to building robust and maintainable software in several ways:\n\n- Encapsulation improves data security and prevents unintended modifications, making the code more robust.\n- Inheritance promotes code reuse, reducing duplication and making the codebase easier to maintain.\n- Polymorphism enables flexibility and extensibility, allowing new classes to be added with minimal changes to existing code.\n- Abstraction simplifies complex systems by hiding implementation details, making the code more understandable and maintainable.\n\nTogether, these principles help create modular, flexible, and scalable software systems that are easier to debug, test, and extend over time.',
+            'Object-Oriented Programming (OOP) is a programming paradigm based on the concept of "objects" that contain data and code. Java is a class-based, object-oriented programming language that implements OOP concepts. The four main principles of OOP in Java are:\n\n1. Encapsulation\nEncapsulation is the mechanism of hiding the internal state and requiring all interaction to be performed through an object\'s methods. It protects the integrity of an object\'s data by preventing direct access from outside the class.\n\nExample:\n```java\npublic class BankAccount {\n  private double balance; // private field\n\n  public double getBalance() {\n    return balance;\n  }\n\n  public void deposit(double amount) {\n    if (amount > 0) {\n      balance += amount;\n    }\n  }\n\n  public boolean withdraw(double amount) {\n    if (amount > 0 && balance >= amount) {\n      balance -= amount;\n      return true;\n    }\n    return false;\n  }\n}\n```\n\nIn this example, the `balance` field is private and can only be accessed through the public methods `getBalance()`, `deposit()`, and `withdraw()`. This ensures that the balance can never be set to an invalid value.\n\n2. Inheritance\nInheritance is the mechanism by which one class can inherit the fields and methods of another class. It promotes code reuse and establishes a relationship between a parent class and its child classes.\n\nExample:\n```java\n// Parent class\npublic class Vehicle {\n  protected String brand;\n\n  public Vehicle(String brand) {\n    this.brand = brand;\n  }\n\n  public void start() {\n    System.out.println("Vehicle starting");\n  }\n}\n\n// Child class\npublic class Car extends Vehicle {\n  private int numDoors;\n\n  public Car(String brand, int numDoors) {\n    super(brand); // Call parent constructor\n    this.numDoors = numDoors;\n  }\n\n  @Override\n  public void start() {\n    console.log(brand + " car starting with " + numDoors + " doors");\n  }\n}\n```\n\nHere, `Car` inherits from `Vehicle` and reuses its `brand` field while adding its own `numDoors` field. It also overrides the `start()` method to provide specific behavior.\n\n3. Polymorphism\nPolymorphism allows objects of different classes to be treated as objects of a common superclass. It enables a single interface to represent different underlying forms (data types).\n\nExample:\n```java\npublic class VehicleDemo {\n  public static void main(String[] args) {\n    // Array of Vehicle references\n    Vehicle[] vehicles = new Vehicle[2];\n    vehicles[0] = new Car("Toyota", 4);      // Car object\n    vehicles[1] = new Motorcycle("Honda");   // Motorcycle object\n    \n    // Polymorphic behavior\n    for (Vehicle vehicle : vehicles) {\n      vehicle.start(); // Calls the appropriate start() method\n    }\n  }\n}\n```\n\nIn this example, both `Car` and `Motorcycle` objects are treated as `Vehicle` objects. When `start()` is called, the appropriate method is executed based on the actual object type, demonstrating polymorphism.\n\n4. Abstraction\nAbstraction is the concept of hiding complex implementation details and showing only the necessary features of an object. It helps in reducing programming complexity and effort.\n\nExample:\n```java\n// Abstract class\npublic abstract class Shape {\n  abstract double calculateArea(); // Abstract method\n\n  public void display() {\n    System.out.println("Area: " + calculateArea());\n  }\n}\n\n// Concrete implementation\npublic class Circle extends Shape {\n  private double radius;\n\n  public Circle(double radius) {\n    this.radius = radius;\n  }\n\n  @Override\n  double calculateArea() {\n    return Math.PI * radius * radius;\n  }\n}\n```\n\nHere, `Shape` is an abstract class that defines a common interface for all shapes. The `calculateArea()` method is abstract, forcing subclasses to provide their own implementation. The `Circle` class extends `Shape` and implements the abstract method.\n\nContribution to Robust and Maintainable Software:\nThese OOP principles contribute to building robust and maintainable software in several ways:\n\n- Encapsulation improves data security and prevents unintended modifications, making the code more robust.\n- Inheritance promotes code reuse, reducing duplication and making the codebase easier to maintain.\n- Polymorphism enables flexibility and extensibility, allowing new classes to be added with minimal changes to existing code.\n- Abstraction simplifies complex systems by hiding implementation details, making the code more understandable and maintainable.\n\nTogether, these principles help create modular, flexible, and scalable software systems that are easier to debug, test, and extend over time.',
         },
       ];
       setQuestions(fetchedQuestions);
@@ -225,11 +321,17 @@ export default function ExamPreparationPage() {
       setAnswerSubmitted(false);
     } else {
       setQuestions([]);
+      setTopics([]);
     }
   }, [selectedChapter]);
 
   const handleSelectChapter = (chapterId) => {
     setSelectedChapter(chapterId);
+    setSelectedTopic("");
+  };
+
+  const handleSelectTopic = (topicId) => {
+    setSelectedTopic(topicId);
   };
 
   const handleGenerateAnswer = (questionText) => {
@@ -471,7 +573,7 @@ export default function ExamPreparationPage() {
       </PageHeader>
 
       {/* Selection Section */}
-      <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+      <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md glass-morphism">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-bold flex items-center">
             <Building className="h-5 w-5 mr-2 text-primary" />
@@ -523,10 +625,11 @@ export default function ExamPreparationPage() {
                   <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="oop-java">OOP in Java</SelectItem>
                   <SelectItem value="data-structures">
                     Data Structures
                   </SelectItem>
+                  <SelectItem value="c-programming">C Programming</SelectItem>
+                  <SelectItem value="oop-java">OOP in Java</SelectItem>
                   <SelectItem value="database">Database Systems</SelectItem>
                   <SelectItem value="networks">Computer Networks</SelectItem>
                   <SelectItem value="web-tech">Web Technology</SelectItem>
@@ -583,7 +686,7 @@ export default function ExamPreparationPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative h-[300px] rounded-xl overflow-hidden border border-border/10 bg-background/50 backdrop-blur-md shadow-md"
+          className="relative h-[300px] rounded-xl overflow-hidden border border-border/10 bg-background/50 backdrop-blur-md shadow-md glass-morphism"
         >
           <KnowledgeGlobe subject={subject} />
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background to-transparent h-24"></div>
@@ -592,11 +695,7 @@ export default function ExamPreparationPage() {
               Knowledge Network
             </h3>
             <p className="text-sm text-muted-foreground">
-              Explore how concepts in{" "}
-              {subject
-                .split("-")
-                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(" ")}{" "}
+              Explore how concepts in {subjectData[subject]?.name || subject}{" "}
               are interconnected
             </p>
           </div>
@@ -613,7 +712,7 @@ export default function ExamPreparationPage() {
             } transition-all duration-300`}
           >
             {sidebarCollapsed ? (
-              <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md sticky top-24">
+              <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md sticky top-24 glass-morphism">
                 <CardContent className="p-4">
                   <Button
                     variant="ghost"
@@ -639,7 +738,7 @@ export default function ExamPreparationPage() {
                               className="rounded-full w-10 h-10"
                               onClick={() => handleSelectChapter(chapter.id)}
                             >
-                              {chapter.id.replace("ch", "")}
+                              {chapter.id.split("-")[1].replace("ch", "")}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -652,7 +751,7 @@ export default function ExamPreparationPage() {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md sticky top-24">
+              <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md sticky top-24 glass-morphism">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-bold flex items-center">
@@ -695,13 +794,7 @@ export default function ExamPreparationPage() {
                         <GraduationCap className="h-5 w-5 text-primary mt-0.5" />
                         <div>
                           <h4 className="font-medium">
-                            {subject
-                              .split("-")
-                              .map(
-                                (word) =>
-                                  word.charAt(0).toUpperCase() + word.slice(1)
-                              )
-                              .join(" ")}
+                            {subjectData[subject]?.name || subject}
                           </h4>
                           <p className="text-xs text-muted-foreground mt-1">
                             Your progress: 45% complete
@@ -770,7 +863,7 @@ export default function ExamPreparationPage() {
             )}
           </div>
 
-          {/* Questions and References */}
+          {/* Topics and Questions Area */}
           <div
             className={`${
               sidebarCollapsed ? "lg:col-span-11" : "lg:col-span-9"
@@ -778,443 +871,673 @@ export default function ExamPreparationPage() {
           >
             {selectedChapter ? (
               <>
-                {/* Question Tabs */}
-                <Tabs
-                  defaultValue="mcq"
-                  value={activeTab}
-                  onValueChange={setActiveTab}
-                  className="w-full"
-                >
-                  <div className="flex justify-center mb-6">
-                    <TabsList className="rounded-full">
-                      <TabsTrigger value="mcq" className="rounded-full">
-                        Multiple Choice
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="short-answer"
-                        className="rounded-full"
-                      >
-                        Short Answer
-                      </TabsTrigger>
-                      <TabsTrigger value="long-answer" className="rounded-full">
-                        Long Answer
-                      </TabsTrigger>
-                    </TabsList>
-                  </div>
+                {/* Topics Section */}
+                <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md glass-morphism">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-bold flex items-center">
+                      <FileText className="h-5 w-5 mr-2 text-primary" />
+                      Chapter Topics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {topics.map((topic) => (
+                        <motion.div
+                          key={topic.id}
+                          whileHover={{ scale: 1.02 }}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                            selectedTopic === topic.id
+                              ? "border-primary bg-primary/10"
+                              : "border-border/10 hover:border-primary/30"
+                          }`}
+                          onClick={() => handleSelectTopic(topic.id)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                selectedTopic === topic.id
+                                  ? "bg-primary"
+                                  : "bg-muted-foreground"
+                              }`}
+                            />
+                            <span className="text-sm font-medium">
+                              {topic.name}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Question Content */}
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={activeTab + questionIndex}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3 }}
+                {/* Content for Selected Topic */}
+                {selectedTopic && (
+                  <div className="space-y-6">
+                    {/* Static Content Section */}
+                    <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md glass-morphism">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-bold flex items-center">
+                          <BookOpen className="h-5 w-5 mr-2 text-primary" />
+                          Topic Overview
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="prose prose-sm max-w-none">
+                          {selectedTopic === "ds-t13" && (
+                            <>
+                              <h3>Heap Data Structure</h3>
+                              <p>
+                                A heap is a specialized tree-based data
+                                structure that satisfies the heap property. It
+                                is commonly implemented as a binary heap, which
+                                is a complete binary tree.
+                              </p>
+
+                              <h4>Definition</h4>
+                              <p>
+                                A heap is a complete binary tree where each node
+                                satisfies the heap property:
+                              </p>
+                              <ul>
+                                <li>
+                                  In a <strong>max-heap</strong>, for any given
+                                  node, the value of that node is greater than
+                                  or equal to the values of its children
+                                </li>
+                                <li>
+                                  In a <strong>min-heap</strong>, for any given
+                                  node, the value of that node is less than or
+                                  equal to the values of its children
+                                </li>
+                              </ul>
+
+                              <h4>Types of Heaps</h4>
+                              <ul>
+                                <li>
+                                  <strong>Binary Heap</strong>: The most common
+                                  type of heap, implemented as a complete binary
+                                  tree
+                                </li>
+                                <li>
+                                  <strong>Min-Heap</strong>: The root node has
+                                  the minimum value
+                                </li>
+                                <li>
+                                  <strong>Max-Heap</strong>: The root node has
+                                  the maximum value
+                                </li>
+                                <li>
+                                  <strong>Binomial Heap</strong>: A collection
+                                  of binomial trees
+                                </li>
+                                <li>
+                                  <strong>Fibonacci Heap</strong>: Has better
+                                  amortized time complexity than binary heaps
+                                </li>
+                              </ul>
+
+                              <h4>Usage</h4>
+                              <p>Heaps are used in:</p>
+                              <ul>
+                                <li>Priority queues</li>
+                                <li>Heap sort algorithm</li>
+                                <li>
+                                  Graph algorithms like Dijkstra's and Prim's
+                                </li>
+                                <li>
+                                  Finding the kth smallest or largest element
+                                </li>
+                              </ul>
+
+                              <h4>Algorithms</h4>
+                              <p>Key heap operations:</p>
+                              <ol>
+                                <li>
+                                  <strong>Insertion</strong>: Add element at the
+                                  end and heapify up
+                                </li>
+                                <li>
+                                  <strong>Extraction</strong>: Remove root,
+                                  replace with last element, and heapify down
+                                </li>
+                                <li>
+                                  <strong>Heapify</strong>: Process to maintain
+                                  heap property
+                                </li>
+                              </ol>
+
+                              <h4>Time Complexity</h4>
+                              <ul>
+                                <li>Insertion: O(log n)</li>
+                                <li>Extraction: O(log n)</li>
+                                <li>Building a heap: O(n)</li>
+                                <li>Peek (get max/min): O(1)</li>
+                              </ul>
+                            </>
+                          )}
+
+                          {selectedTopic === "c-t10" && (
+                            <>
+                              <h3>Introduction to Pointers</h3>
+                              <p>
+                                Pointers are variables that store memory
+                                addresses rather than actual values. They are a
+                                fundamental concept in C programming that
+                                provides flexibility and efficiency.
+                              </p>
+
+                              <h4>Definition</h4>
+                              <p>
+                                A pointer is a variable whose value is the
+                                address of another variable. The general syntax
+                                for pointer declaration is:
+                              </p>
+                              <pre>data_type *pointer_name;</pre>
+
+                              <h4>Pointer Operations</h4>
+                              <ul>
+                                <li>
+                                  <strong>Address-of operator (&)</strong>:
+                                  Returns the address of a variable
+                                </li>
+                                <li>
+                                  <strong>Dereference operator (*)</strong>:
+                                  Accesses the value at the address stored in a
+                                  pointer
+                                </li>
+                                <li>
+                                  <strong>Pointer arithmetic</strong>:
+                                  Adding/subtracting integers to pointers
+                                </li>
+                              </ul>
+
+                              <h4>Usage</h4>
+                              <p>Pointers are used for:</p>
+                              <ul>
+                                <li>Dynamic memory allocation</li>
+                                <li>Arrays and string manipulation</li>
+                                <li>Function arguments (pass by reference)</li>
+                                <li>
+                                  Data structures like linked lists, trees, etc.
+                                </li>
+                                <li>System-level programming</li>
+                              </ul>
+
+                              <h4>Example</h4>
+                              <pre>
+                                {`#include <stdio.h>
+
+int main() {
+    int var = 20;   // Actual variable declaration
+    int *ip;        // Pointer variable declaration
+
+    ip = &var;      // Store address of var in pointer variable
+
+    printf("Address of var: %p\\n", &var);
+    printf("Address stored in ip: %p\\n", ip);
+    printf("Value of *ip: %d\\n", *ip);
+
+    return 0;
+}`}
+                              </pre>
+                            </>
+                          )}
+
+                          {!["ds-t13", "c-t10"].includes(selectedTopic) && (
+                            <p>Select a topic to view detailed information.</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Question Tabs */}
+                    <Tabs
+                      defaultValue="mcq"
+                      value={activeTab}
+                      onValueChange={setActiveTab}
+                      className="w-full"
                     >
-                      <div className="grid gap-6 lg:grid-cols-2">
-                        {/* Question Section */}
-                        <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-                          <CardHeader className="pb-2">
-                            <div className="flex justify-between items-center">
-                              <CardTitle className="text-xl font-bold flex items-center">
-                                {activeTab === "mcq" ? (
-                                  <>
-                                    <BarChart className="h-5 w-5 mr-2 text-blue-500" />{" "}
-                                    Multiple Choice Question
-                                  </>
-                                ) : activeTab === "short-answer" ? (
-                                  <>
-                                    <FileText className="h-5 w-5 mr-2 text-green-500" />{" "}
-                                    Short Answer Question
-                                  </>
-                                ) : (
-                                  <>
-                                    <BookOpen className="h-5 w-5 mr-2 text-amber-500" />{" "}
-                                    Long Answer Question
-                                  </>
-                                )}
-                              </CardTitle>
-                              <div className="flex items-center gap-2">
+                      <div className="flex justify-center mb-6">
+                        <TabsList className="rounded-full glass-morphism">
+                          <TabsTrigger value="mcq" className="rounded-full">
+                            Multiple Choice
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="short-answer"
+                            className="rounded-full"
+                          >
+                            Short Answer
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="long-answer"
+                            className="rounded-full"
+                          >
+                            Long Answer
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
+
+                      {/* Question Content */}
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={activeTab + questionIndex}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <div className="grid gap-6 lg:grid-cols-2">
+                            {/* Question Section */}
+                            <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md glass-morphism">
+                              <CardHeader className="pb-2">
+                                <div className="flex justify-between items-center">
+                                  <CardTitle className="text-xl font-bold flex items-center">
+                                    {activeTab === "mcq" ? (
+                                      <>
+                                        <BarChart className="h-5 w-5 mr-2 text-blue-500" />{" "}
+                                        Multiple Choice Question
+                                      </>
+                                    ) : activeTab === "short-answer" ? (
+                                      <>
+                                        <FileText className="h-5 w-5 mr-2 text-green-500" />{" "}
+                                        Short Answer Question
+                                      </>
+                                    ) : (
+                                      <>
+                                        <BookOpen className="h-5 w-5 mr-2 text-amber-500" />{" "}
+                                        Long Answer Question
+                                      </>
+                                    )}
+                                  </CardTitle>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className={`h-8 w-8 rounded-full ${
+                                        bookmarked ? "text-amber-500" : ""
+                                      }`}
+                                      onClick={handleBookmark}
+                                    >
+                                      <Bookmark
+                                        className={`h-4 w-4 ${
+                                          bookmarked ? "fill-amber-500" : ""
+                                        }`}
+                                      />
+                                      <span className="sr-only">Bookmark</span>
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="rounded-full"
+                                      onClick={handleEditQuestion}
+                                    >
+                                      {editMode ? (
+                                        <>
+                                          <Save className="mr-2 h-4 w-4" />
+                                          Save
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Edit className="mr-2 h-4 w-4" />
+                                          Edit
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="space-y-6">
+                                  {/* Question Number */}
+                                  <div className="flex justify-between items-center">
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-primary/10 text-primary border-primary/20"
+                                    >
+                                      Question {questionIndex + 1} of{" "}
+                                      {filteredQuestions.length}
+                                    </Badge>
+                                    <Badge
+                                      variant="outline"
+                                      className={`
+                                      ${
+                                        difficulty < 30
+                                          ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                          : difficulty < 70
+                                          ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                          : "bg-red-500/10 text-red-500 border-red-500/20"
+                                      }
+                                    `}
+                                    >
+                                      {difficulty < 30
+                                        ? "Easy"
+                                        : difficulty < 70
+                                        ? "Medium"
+                                        : "Hard"}
+                                    </Badge>
+                                  </div>
+
+                                  {/* Question Text */}
+                                  <div className="p-4 rounded-lg border border-border/10 bg-background/80">
+                                    {editMode ? (
+                                      <Textarea
+                                        value={editedQuestion}
+                                        onChange={(e) =>
+                                          setEditedQuestion(e.target.value)
+                                        }
+                                        className="min-h-[100px]"
+                                      />
+                                    ) : (
+                                      <p className="font-medium">
+                                        {currentQuestionData?.text ||
+                                          "No question available for this chapter."}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {/* Question Content Based on Type */}
+                                  {currentQuestionData &&
+                                    activeTab === "mcq" && (
+                                      <RadioGroup
+                                        value={selectedAnswer}
+                                        onValueChange={setSelectedAnswer}
+                                        className="space-y-3"
+                                        disabled={answerSubmitted}
+                                      >
+                                        {currentQuestionData.options.map(
+                                          (option) => (
+                                            <div
+                                              key={option.id}
+                                              className={`flex items-center space-x-2 p-3 rounded-lg border ${
+                                                answerSubmitted
+                                                  ? option.isCorrect
+                                                    ? "border-green-500 bg-green-500/10"
+                                                    : option.id ===
+                                                      selectedAnswer
+                                                    ? "border-red-500 bg-red-500/10"
+                                                    : "border-border/10 bg-background/80"
+                                                  : "border-border/10 bg-background/80 hover:border-primary/30 hover:bg-primary/5"
+                                              }`}
+                                            >
+                                              <RadioGroupItem
+                                                value={option.id}
+                                                id={`option-${option.id}`}
+                                              />
+                                              <Label
+                                                htmlFor={`option-${option.id}`}
+                                                className="flex-1 cursor-pointer"
+                                              >
+                                                {option.text}
+                                              </Label>
+                                              {answerSubmitted &&
+                                                (option.isCorrect ? (
+                                                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                                ) : option.id ===
+                                                  selectedAnswer ? (
+                                                  <X className="h-5 w-5 text-red-500" />
+                                                ) : null)}
+                                            </div>
+                                          )
+                                        )}
+                                      </RadioGroup>
+                                    )}
+
+                                  {currentQuestionData &&
+                                    activeTab === "short-answer" &&
+                                    !answerSubmitted && (
+                                      <div className="space-y-2">
+                                        <Label htmlFor="short-answer">
+                                          Your Answer
+                                        </Label>
+                                        <Textarea
+                                          id="short-answer"
+                                          placeholder="Type your answer here..."
+                                          className="min-h-[150px]"
+                                          value={selectedAnswer}
+                                          onChange={(e) =>
+                                            setSelectedAnswer(e.target.value)
+                                          }
+                                        />
+                                      </div>
+                                    )}
+
+                                  {currentQuestionData &&
+                                    activeTab === "long-answer" &&
+                                    !answerSubmitted && (
+                                      <div className="space-y-2">
+                                        <Label htmlFor="long-answer">
+                                          Your Answer
+                                        </Label>
+                                        <Textarea
+                                          id="long-answer"
+                                          placeholder="Type your answer here..."
+                                          className="min-h-[200px]"
+                                          value={selectedAnswer}
+                                          onChange={(e) =>
+                                            setSelectedAnswer(e.target.value)
+                                          }
+                                        />
+                                      </div>
+                                    )}
+
+                                  {/* Model Answer (after submission) */}
+                                  {currentQuestionData &&
+                                    answerSubmitted &&
+                                    (activeTab === "short-answer" ||
+                                      activeTab === "long-answer") && (
+                                      <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
+                                        <div className="flex items-start gap-2">
+                                          <div className="mt-0.5">
+                                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                          </div>
+                                          <div>
+                                            <h4 className="font-medium text-green-500">
+                                              Model Answer
+                                            </h4>
+                                            <div className="text-sm mt-1 whitespace-pre-wrap">
+                                              {currentQuestionData.modelAnswer}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                  {/* Explanation */}
+                                  {currentQuestionData &&
+                                    answerSubmitted &&
+                                    activeTab === "mcq" &&
+                                    showExplanations && (
+                                      <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
+                                        <div className="flex items-start gap-2">
+                                          <div className="mt-0.5">
+                                            <Lightbulb className="h-5 w-5 text-green-500" />
+                                          </div>
+                                          <div>
+                                            <h4 className="font-medium text-green-500">
+                                              Explanation
+                                            </h4>
+                                            <p className="text-sm mt-1">
+                                              {currentQuestionData.explanation}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                  {/* Submit Button (if not submitted) */}
+                                  {currentQuestionData && !answerSubmitted && (
+                                    <AnimatedButton
+                                      onClick={handleAnswerSubmit}
+                                      className="w-full"
+                                    >
+                                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                                      Submit Answer
+                                    </AnimatedButton>
+                                  )}
+
+                                  {/* AI Answer Generation Button (if submitted) */}
+                                  {currentQuestionData && answerSubmitted && (
+                                    <AnimatedButton
+                                      onClick={() =>
+                                        handleGenerateAnswer(
+                                          currentQuestionData?.text ||
+                                            "No question available for this chapter."
+                                        )
+                                      }
+                                      className="w-full"
+                                    >
+                                      <Brain className="mr-2 h-4 w-4" />
+                                      Generate AI Answer
+                                    </AnimatedButton>
+                                  )}
+
+                                  {/* Navigation Buttons */}
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="outline"
+                                      className="flex-1 rounded-full"
+                                      onClick={handlePreviousQuestion}
+                                      disabled={questionIndex === 0}
+                                    >
+                                      <ChevronLeft className="mr-2 h-4 w-4" />
+                                      Previous
+                                    </Button>
+                                    <Button
+                                      className="flex-1 rounded-full"
+                                      onClick={handleNextQuestion}
+                                      disabled={
+                                        questionIndex ===
+                                        filteredQuestions.length - 1
+                                      }
+                                    >
+                                      Next
+                                      <ChevronRight className="ml-2 h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                              <CardFooter className="flex gap-2 pt-0">
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className={`h-8 w-8 rounded-full ${
-                                    bookmarked ? "text-amber-500" : ""
-                                  }`}
-                                  onClick={handleBookmark}
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full"
                                 >
-                                  <Bookmark
-                                    className={`h-4 w-4 ${
-                                      bookmarked ? "fill-amber-500" : ""
-                                    }`}
-                                  />
-                                  <span className="sr-only">Bookmark</span>
+                                  <ThumbsUp className="mr-2 h-4 w-4" />
+                                  Helpful
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full"
-                                  onClick={handleEditQuestion}
                                 >
-                                  {editMode ? (
-                                    <>
-                                      <Save className="mr-2 h-4 w-4" />
-                                      Save
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Edit className="mr-2 h-4 w-4" />
-                                      Edit
-                                    </>
-                                  )}
+                                  <ThumbsDown className="mr-2 h-4 w-4" />
+                                  Not Helpful
                                 </Button>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-6">
-                              {/* Question Number */}
-                              <div className="flex justify-between items-center">
-                                <Badge
+                                <Button
                                   variant="outline"
-                                  className="bg-primary/10 text-primary border-primary/20"
+                                  size="sm"
+                                  className="rounded-full ml-auto"
                                 >
-                                  Question {questionIndex + 1} of{" "}
-                                  {filteredQuestions.length}
-                                </Badge>
-                                <Badge
-                                  variant="outline"
-                                  className={`
-                                  ${
-                                    difficulty < 30
-                                      ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                      : difficulty < 70
-                                      ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                      : "bg-red-500/10 text-red-500 border-red-500/20"
-                                  }
-                                `}
-                                >
-                                  {difficulty < 30
-                                    ? "Easy"
-                                    : difficulty < 70
-                                    ? "Medium"
-                                    : "Hard"}
-                                </Badge>
-                              </div>
+                                  <Share2 className="mr-2 h-4 w-4" />
+                                  Share
+                                </Button>
+                              </CardFooter>
+                            </Card>
 
-                              {/* Question Text */}
-                              <div className="p-4 rounded-lg border border-border/10 bg-background/80">
-                                {editMode ? (
-                                  <Textarea
-                                    value={editedQuestion}
-                                    onChange={(e) =>
-                                      setEditedQuestion(e.target.value)
-                                    }
-                                    className="min-h-[100px]"
-                                  />
-                                ) : (
-                                  <p className="font-medium">
-                                    {currentQuestionData?.text ||
-                                      "No question available for this chapter."}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Question Content Based on Type */}
-                              {currentQuestionData && activeTab === "mcq" && (
-                                <RadioGroup
-                                  value={selectedAnswer}
-                                  onValueChange={setSelectedAnswer}
-                                  className="space-y-3"
-                                  disabled={answerSubmitted}
-                                >
-                                  {currentQuestionData.options.map((option) => (
-                                    <div
-                                      key={option.id}
-                                      className={`flex items-center space-x-2 p-3 rounded-lg border ${
-                                        answerSubmitted
-                                          ? option.isCorrect
-                                            ? "border-green-500 bg-green-500/10"
-                                            : option.id === selectedAnswer
-                                            ? "border-red-500 bg-red-500/10"
-                                            : "border-border/10 bg-background/80"
-                                          : "border-border/10 bg-background/80 hover:border-primary/30 hover:bg-primary/5"
-                                      }`}
-                                    >
-                                      <RadioGroupItem
-                                        value={option.id}
-                                        id={`option-${option.id}`}
-                                      />
-                                      <Label
-                                        htmlFor={`option-${option.id}`}
-                                        className="flex-1 cursor-pointer"
+                            {/* Reference Section */}
+                            <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md glass-morphism">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-lg font-bold flex items-center">
+                                  <FileText className="h-5 w-5 mr-2 text-primary" />
+                                  Reference Materials
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="space-y-4">
+                                  {/* Media Items */}
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {mediaItems.map((item, index) => (
+                                      <div
+                                        key={index}
+                                        className="relative rounded-md overflow-hidden border border-border/10 aspect-video"
                                       >
-                                        {option.text}
-                                      </Label>
-                                      {answerSubmitted &&
-                                        (option.isCorrect ? (
-                                          <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                        ) : option.id === selectedAnswer ? (
-                                          <X className="h-5 w-5 text-red-500" />
-                                        ) : null)}
-                                    </div>
-                                  ))}
-                                </RadioGroup>
-                              )}
-
-                              {currentQuestionData &&
-                                activeTab === "short-answer" &&
-                                !answerSubmitted && (
-                                  <div className="space-y-2">
-                                    <Label htmlFor="short-answer">
-                                      Your Answer
-                                    </Label>
-                                    <Textarea
-                                      id="short-answer"
-                                      placeholder="Type your answer here..."
-                                      className="min-h-[150px]"
-                                      value={selectedAnswer}
-                                      onChange={(e) =>
-                                        setSelectedAnswer(e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                )}
-
-                              {currentQuestionData &&
-                                activeTab === "long-answer" &&
-                                !answerSubmitted && (
-                                  <div className="space-y-2">
-                                    <Label htmlFor="long-answer">
-                                      Your Answer
-                                    </Label>
-                                    <Textarea
-                                      id="long-answer"
-                                      placeholder="Type your answer here..."
-                                      className="min-h-[200px]"
-                                      value={selectedAnswer}
-                                      onChange={(e) =>
-                                        setSelectedAnswer(e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                )}
-
-                              {/* Model Answer (after submission) */}
-                              {currentQuestionData &&
-                                answerSubmitted &&
-                                (activeTab === "short-answer" ||
-                                  activeTab === "long-answer") && (
-                                  <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
-                                    <div className="flex items-start gap-2">
-                                      <div className="mt-0.5">
-                                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                        {item.type === "video" ? (
+                                          <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="rounded-full bg-primary/90 text-white"
+                                            >
+                                              <ExternalLink className="h-4 w-4" />
+                                            </Button>
+                                            <img
+                                              src={
+                                                item.thumbnail ||
+                                                "/placeholder.svg"
+                                              }
+                                              alt={item.title}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          </div>
+                                        ) : (
+                                          <img
+                                            src={item.src || "/placeholder.svg"}
+                                            alt={item.title}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        )}
                                       </div>
-                                      <div>
-                                        <h4 className="font-medium text-green-500">
-                                          Model Answer
-                                        </h4>
-                                        <div className="text-sm mt-1 whitespace-pre-wrap">
-                                          {currentQuestionData.modelAnswer}
+                                    ))}
+                                  </div>
+
+                                  {/* Key Concepts */}
+                                  <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+                                    <h4 className="font-medium flex items-center gap-2 mb-2">
+                                      <BookOpen className="h-4 w-4 text-primary" />
+                                      <span>Key Concepts</span>
+                                    </h4>
+                                    <ul className="space-y-2 text-sm">
+                                      <li className="flex items-start gap-2">
+                                        <div className="mt-0.5">
+                                          <CheckCircle2 className="h-3 w-3 text-green-500" />
                                         </div>
-                                      </div>
-                                    </div>
+                                        <span>
+                                          Polymorphism is derived from Greek
+                                          words: "poly" (many) and "morphs"
+                                          (forms).
+                                        </span>
+                                      </li>
+                                      <li className="flex items-start gap-2">
+                                        <div className="mt-0.5">
+                                          <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                        </div>
+                                        <span>
+                                          Two main types: Compile-time (method
+                                          overloading) and Runtime (method
+                                          overriding).
+                                        </span>
+                                      </li>
+                                      <li className="flex items-start gap-2">
+                                        <div className="mt-0.5">
+                                          <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                        </div>
+                                        <span>
+                                          Enables code reusability and
+                                          flexibility in object-oriented design.
+                                        </span>
+                                      </li>
+                                    </ul>
                                   </div>
-                                )}
 
-                              {/* Explanation */}
-                              {currentQuestionData &&
-                                answerSubmitted &&
-                                activeTab === "mcq" &&
-                                showExplanations && (
-                                  <div className="p-4 rounded-lg border border-green-500/20 bg-green-500/10">
-                                    <div className="flex items-start gap-2">
-                                      <div className="mt-0.5">
-                                        <Lightbulb className="h-5 w-5 text-green-500" />
-                                      </div>
-                                      <div>
-                                        <h4 className="font-medium text-green-500">
-                                          Explanation
-                                        </h4>
-                                        <p className="text-sm mt-1">
-                                          {currentQuestionData.explanation}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
-                              {/* Submit Button (if not submitted) */}
-                              {currentQuestionData && !answerSubmitted && (
-                                <AnimatedButton
-                                  onClick={handleAnswerSubmit}
-                                  className="w-full"
-                                >
-                                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                                  Submit Answer
-                                </AnimatedButton>
-                              )}
-
-                              {/* AI Answer Generation Button (if submitted) */}
-                              {currentQuestionData && answerSubmitted && (
-                                <AnimatedButton
-                                  onClick={() =>
-                                    handleGenerateAnswer(
-                                      currentQuestionData?.text || "No question available for this chapter."
-                                    )
-                                  }
-                                  className="w-full"
-                                >
-                                  <Brain className="mr-2 h-4 w-4" />
-                                  Generate AI Answer
-                                </AnimatedButton>
-                              )}
-
-                              {/* Navigation Buttons */}
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  className="flex-1 rounded-full"
-                                  onClick={handlePreviousQuestion}
-                                  disabled={questionIndex === 0}
-                                >
-                                  <ChevronLeft className="mr-2 h-4 w-4" />
-                                  Previous
-                                </Button>
-                                <Button
-                                  className="flex-1 rounded-full"
-                                  onClick={handleNextQuestion}
-                                  disabled={
-                                    questionIndex ===
-                                    filteredQuestions.length - 1
-                                  }
-                                >
-                                  Next
-                                  <ChevronRight className="ml-2 h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                          <CardFooter className="flex gap-2 pt-0">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="rounded-full"
-                            >
-                              <ThumbsUp className="mr-2 h-4 w-4" />
-                              Helpful
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="rounded-full"
-                            >
-                              <ThumbsDown className="mr-2 h-4 w-4" />
-                              Not Helpful
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="rounded-full ml-auto"
-                            >
-                              <Share2 className="mr-2 h-4 w-4" />
-                              Share
-                            </Button>
-                          </CardFooter>
-                        </Card>
-
-                        {/* Reference Section */}
-                        <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-lg font-bold flex items-center">
-                              <FileText className="h-5 w-5 mr-2 text-primary" />
-                              Reference Materials
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-4">
-                              {/* Media Items */}
-                              <div className="grid grid-cols-2 gap-2">
-                                {mediaItems.map((item, index) => (
-                                  <div
-                                    key={index}
-                                    className="relative rounded-md overflow-hidden border border-border/10 aspect-video"
-                                  >
-                                    {item.type === "video" ? (
-                                      <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="rounded-full bg-primary/90 text-white"
-                                        >
-                                          <ExternalLink className="h-4 w-4" />
-                                        </Button>
-                                        <img
-                                          src={
-                                            item.thumbnail || "/placeholder.svg"
-                                          }
-                                          alt={item.title}
-                                          className="w-full h-full object-cover"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <img
-                                        src={item.src || "/placeholder.svg"}
-                                        alt={item.title}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-
-                              {/* Key Concepts */}
-                              <div className="p-3 rounded-lg border border-border/10 bg-background/80">
-                                <h4 className="font-medium flex items-center gap-2 mb-2">
-                                  <BookOpen className="h-4 w-4 text-primary" />
-                                  <span>Key Concepts</span>
-                                </h4>
-                                <ul className="space-y-2 text-sm">
-                                  <li className="flex items-start gap-2">
-                                    <div className="mt-0.5">
-                                      <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                    </div>
-                                    <span>
-                                      Polymorphism is derived from Greek words:
-                                      "poly" (many) and "morphs" (forms).
-                                    </span>
-                                  </li>
-                                  <li className="flex items-start gap-2">
-                                    <div className="mt-0.5">
-                                      <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                    </div>
-                                    <span>
-                                      Two main types: Compile-time (method
-                                      overloading) and Runtime (method
-                                      overriding).
-                                    </span>
-                                  </li>
-                                  <li className="flex items-start gap-2">
-                                    <div className="mt-0.5">
-                                      <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                    </div>
-                                    <span>
-                                      Enables code reusability and flexibility
-                                      in object-oriented design.
-                                    </span>
-                                  </li>
-                                </ul>
-                              </div>
-
-                              {/* Example Code */}
-                              <div className="p-3 rounded-lg border border-border/10 bg-background/80">
-                                <h4 className="font-medium flex items-center gap-2 mb-2">
-                                  <FileText className="h-4 w-4 text-amber-500" />
-                                  <span>Example Code</span>
-                                </h4>
-                                <pre className="bg-muted p-2 rounded-md text-xs overflow-x-auto">
-                                  <code>
-                                    {`// Parent class
+                                  {/* Example Code */}
+                                  <div className="p-3 rounded-lg border border-border/10 bg-background/80">
+                                    <h4 className="font-medium flex items-center gap-2 mb-2">
+                                      <FileText className="h-4 w-4 text-amber-500" />
+                                      <span>Example Code</span>
+                                    </h4>
+                                    <pre className="bg-muted p-2 rounded-md text-xs overflow-x-auto">
+                                      <code>
+                                        {`// Parent class
 class Animal {
   public void makeSound() {
     System.out.println("Animal makes a sound");
@@ -1246,172 +1569,174 @@ public class Main {
     myCat.makeSound();  // Outputs: "Cat meows"
   }
 }`}
-                                  </code>
-                                </pre>
-                              </div>
-
-                              {/* Study Tip */}
-                              <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
-                                <div className="flex items-start gap-2">
-                                  <div className="mt-0.5">
-                                    <Lightbulb className="h-4 w-4 text-amber-500" />
+                                      </code>
+                                    </pre>
                                   </div>
-                                  <div>
-                                    <h4 className="text-sm font-medium text-amber-500">
-                                      Study Tip
-                                    </h4>
-                                    <p className="text-xs mt-1">
-                                      Focus on understanding the practical
-                                      applications of polymorphism in real-world
-                                      scenarios to better grasp the concept. Try
-                                      implementing a simple program that
-                                      demonstrates polymorphism with different
-                                      classes.
-                                    </p>
+
+                                  {/* Study Tip */}
+                                  <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
+                                    <div className="flex items-start gap-2">
+                                      <div className="mt-0.5">
+                                        <Lightbulb className="h-4 w-4 text-amber-500" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-medium text-amber-500">
+                                          Study Tip
+                                        </h4>
+                                        <p className="text-xs mt-1">
+                                          Focus on understanding the practical
+                                          applications of polymorphism in
+                                          real-world scenarios to better grasp
+                                          the concept. Try implementing a simple
+                                          program that demonstrates polymorphism
+                                          with different classes.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Additional Resources */}
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="rounded-full"
+                                    >
+                                      <Download className="mr-2 h-4 w-4" />
+                                      Download Notes
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="rounded-full"
+                                    >
+                                      <MessageSquare className="mr-2 h-4 w-4" />
+                                      Discuss Topic
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        </motion.div>
+                      </AnimatePresence>
+                    </Tabs>
+
+                    {/* Progress Section */}
+                    <motion.div
+                      ref={progressRef}
+                      initial="hidden"
+                      animate={isProgressInView ? "visible" : "hidden"}
+                      variants={fadeInVariants}
+                      className="mt-8"
+                    >
+                      <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md glass-morphism">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-xl font-bold flex items-center">
+                            <Award className="h-5 w-5 mr-2 text-primary" />
+                            Your Progress
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid gap-6 md:grid-cols-2">
+                            <div>
+                              <h3 className="text-lg font-medium mb-4">
+                                Chapter Performance
+                              </h3>
+                              <div className="h-[250px]">
+                                <ProgressChart />
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <h3 className="text-lg font-medium">
+                                Question Types Mastery
+                              </h3>
+
+                              <div className="space-y-3">
+                                <div>
+                                  <div className="flex justify-between text-sm mb-1">
+                                    <span>Multiple Choice Questions</span>
+                                    <span className="font-medium">85%</span>
+                                  </div>
+                                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                    <motion.div
+                                      className="h-full bg-blue-500 rounded-full"
+                                      initial={{ width: 0 }}
+                                      animate={{ width: "85%" }}
+                                      transition={{ duration: 1, delay: 0.2 }}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="flex justify-between text-sm mb-1">
+                                    <span>Short Answer Questions</span>
+                                    <span className="font-medium">65%</span>
+                                  </div>
+                                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                    <motion.div
+                                      className="h-full bg-green-500 rounded-full"
+                                      initial={{ width: 0 }}
+                                      animate={{ width: "65%" }}
+                                      transition={{ duration: 1, delay: 0.4 }}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="flex justify-between text-sm mb-1">
+                                    <span>Long Answer Questions</span>
+                                    <span className="font-medium">45%</span>
+                                  </div>
+                                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                    <motion.div
+                                      className="h-full bg-amber-500 rounded-full"
+                                      initial={{ width: 0 }}
+                                      animate={{ width: "45%" }}
+                                      transition={{ duration: 1, delay: 0.6 }}
+                                    />
                                   </div>
                                 </div>
                               </div>
 
-                              {/* Additional Resources */}
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 mt-4">
+                                <h4 className="font-medium flex items-center gap-2 mb-2">
+                                  <Zap className="h-4 w-4 text-primary" />
+                                  <span>AI Recommendation</span>
+                                </h4>
+                                <p className="text-sm">
+                                  Focus on improving your long answer questions
+                                  by practicing more essay-type responses. Your
+                                  understanding of core concepts is strong, but
+                                  you need to work on articulating complex ideas
+                                  in longer formats.
+                                </p>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="rounded-full"
+                                  className="mt-3 rounded-full"
                                 >
-                                  <Download className="mr-2 h-4 w-4" />
-                                  Download Notes
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full"
-                                >
-                                  <MessageSquare className="mr-2 h-4 w-4" />
-                                  Discuss Topic
+                                  <Brain className="mr-2 h-4 w-4" />
+                                  Get Personalized Study Plan
                                 </Button>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                      </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </motion.div>
-                  </AnimatePresence>
-                </Tabs>
-
-                {/* Progress Section */}
-                <motion.div
-                  ref={progressRef}
-                  initial="hidden"
-                  animate={isProgressInView ? "visible" : "hidden"}
-                  variants={fadeInVariants}
-                  className="mt-8"
-                >
-                  <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xl font-bold flex items-center">
-                        <Award className="h-5 w-5 mr-2 text-primary" />
-                        Your Progress
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <div>
-                          <h3 className="text-lg font-medium mb-4">
-                            Chapter Performance
-                          </h3>
-                          <div className="h-[250px]">
-                            <ProgressChart />
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-medium">
-                            Question Types Mastery
-                          </h3>
-
-                          <div className="space-y-3">
-                            <div>
-                              <div className="flex justify-between text-sm mb-1">
-                                <span>Multiple Choice Questions</span>
-                                <span className="font-medium">85%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <motion.div
-                                  className="h-full bg-blue-500 rounded-full"
-                                  initial={{ width: 0 }}
-                                  animate={{ width: "85%" }}
-                                  transition={{ duration: 1, delay: 0.2 }}
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="flex justify-between text-sm mb-1">
-                                <span>Short Answer Questions</span>
-                                <span className="font-medium">65%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <motion.div
-                                  className="h-full bg-green-500 rounded-full"
-                                  initial={{ width: 0 }}
-                                  animate={{ width: "65%" }}
-                                  transition={{ duration: 1, delay: 0.4 }}
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="flex justify-between text-sm mb-1">
-                                <span>Long Answer Questions</span>
-                                <span className="font-medium">45%</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <motion.div
-                                  className="h-full bg-amber-500 rounded-full"
-                                  initial={{ width: 0 }}
-                                  animate={{ width: "45%" }}
-                                  transition={{ duration: 1, delay: 0.6 }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 mt-4">
-                            <h4 className="font-medium flex items-center gap-2 mb-2">
-                              <Zap className="h-4 w-4 text-primary" />
-                              <span>AI Recommendation</span>
-                            </h4>
-                            <p className="text-sm">
-                              Focus on improving your long answer questions by
-                              practicing more essay-type responses. Your
-                              understanding of core concepts is strong, but you
-                              need to work on articulating complex ideas in
-                              longer formats.
-                            </p>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mt-3 rounded-full"
-                            >
-                              <Brain className="mr-2 h-4 w-4" />
-                              Get Personalized Study Plan
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                  </div>
+                )}
               </>
             ) : (
-              <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md">
+              <Card className="border-border/10 bg-background/50 backdrop-blur-md shadow-md glass-morphism">
                 <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                   <BookMarked className="h-16 w-16 text-primary mb-4 opacity-50" />
                   <h3 className="text-xl font-bold mb-2">Select a Chapter</h3>
                   <p className="text-muted-foreground max-w-md mb-6">
-                    Choose a chapter from the sidebar to view questions and
-                    start your exam preparation.
+                    Choose a chapter from the sidebar to view topics and start
+                    your exam preparation.
                   </p>
                   <AnimatedButton>
                     <ChevronRight className="mr-2 h-4 w-4" />
@@ -1437,6 +1762,18 @@ public class Main {
           />
         </motion.div>
       )}
+
+      <style jsx global>{`
+        .glass-morphism {
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dark .glass-morphism {
+          background: rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      `}</style>
     </div>
   );
 }

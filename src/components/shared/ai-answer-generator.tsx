@@ -24,7 +24,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatedButton } from "@/components/shared/animated-button";
 
-export function AIAnswerGenerator({ question, onClose }) {
+interface AIAnswerGeneratorProps {
+  question: string;
+  onClose: () => void;
+}
+
+export function AIAnswerGenerator({ question, onClose }: AIAnswerGeneratorProps) {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedAnswer, setGeneratedAnswer] = useState("");
@@ -149,7 +154,7 @@ export function AIAnswerGenerator({ question, onClose }) {
                     Click the button below to generate an AI-powered answer to
                     this question.
                   </p>
-                  <AnimatedButton onClick={handleGenerateAnswer}>
+                  <AnimatedButton onClick={handleGenerateAnswer} className="">
                     <Brain className="mr-2 h-4 w-4" />
                     Generate Answer
                   </AnimatedButton>
